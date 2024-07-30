@@ -1,4 +1,17 @@
 ﻿# Install-Everything.ps1
+
+# Function to check if running as administrator
+function Test-Admin {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Elevate to administrator if not already
+if (-not (Test-Admin)) {
+    Write-Host "Restarting script with elevated permissions..."
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
 function Install-Everything {
     $installerPath = [System.IO.Path]::Combine($env:TEMP, 'Everything.exe')
     Write-Host 'Downloading Everything...'

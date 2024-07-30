@@ -102,37 +102,37 @@ try {
     Log-Step
     $params = @{
         repoUrl = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip"
-        destination = "$PSscriptRoot"
-        logFile = "$PSscriptRoot\SetupLabCopy.log"
+        destination = $PSScriptRoot
+        logFile = "$PSScriptRoot\SetupLabCopy.log"
     }
     Download-And-Extract-SetupLab @params
     # Step 2: Install Visual Studio Code
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-VSCode.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-VSCode.ps1`""
 
     # Step 3: Install Everything
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-Everything.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-Everything.ps1`""
 
     # Step 4: Install FileLocator Pro
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-FileLocatorPro.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-FileLocatorPro.ps1`""
 
     # Step 5: Install Git
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-Git.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-Git.ps1`""
 
     # Step 6: Install PowerShell 7
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-PowerShell7.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-PowerShell7.ps1`""
 
     # Step 7: Install GitHub Desktop
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-GitHubDesktop.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-GitHubDesktop.ps1`""
 
     # Step 8: Install Windows Terminal
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-WindowsTerminal.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSScriptRoot\Install-WindowsTerminal.ps1`""
 
 } catch {
     # Capture the error details

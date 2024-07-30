@@ -1,6 +1,8 @@
-#call using powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/Forticlient/main/Setup.ps1)"
-#call using powershell -Command "iex (irm https://bit.ly/4doEQ7P)"
-#call using powershell -Command "iex (irm bit.ly/4doEQ7P)"
+# call using:
+
+# powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/Forticlient/main/Setup.ps1)"
+# powershell -Command "iex (irm https://bit.ly/4doEQ7P)"
+# powershell -Command "iex (irm bit.ly/4doEQ7P)"
 
 
 # Initialize the global steps list
@@ -24,11 +26,36 @@ function Log-Step {
 }
 
 
-# Download-And-Extract-SetupLab
+# Copy-With-Logging.ps1
+function Copy-With-Logging {
+    param (
+        [string]$source,
+        [string]$destination,
+        [string]$logFile
+    )
+
+    # Define the full path to robocopy.exe
+    $robocopyPath = "C:\Windows\System32\robocopy.exe"
+
+    # Ensure the base destination directory exists
+    if (-Not (Test-Path -Path $destination)) {
+        New-Item -Path $destination -ItemType Directory -Force
+    }
+
+    # Execute robocopy with logging
+    Start-Process -FilePath $robocopyPath -ArgumentList "$source", "$destination", "/E", "/LOG:$logFile" -Wait -NoNewWindow
+
+    Write-Host "Copy with logging from $source to $destination executed."
+}
+
+
+
+# Download-And-Extract-SetupLab.ps1
 function Download-And-Extract-SetupLab {
     param (
-        [string]$repoUrl,
-        [string]$destination
+        [string]$repoUrl = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip",
+        [string]$destination,
+        [string]$logFile
     )
 
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
@@ -43,16 +70,18 @@ function Download-And-Extract-SetupLab {
     Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
     Write-Host "Extraction complete."
 
-    # Use robocopy to move contents to the final destination
-    Write-Host "Copying extracted files to $destination..."
-    $robocopyArgs = "$extractPath\* $destination /E /MOVE /COPYALL /R:3 /W:10"
-    Start-Process -FilePath robocopy.exe -ArgumentList $robocopyArgs -Wait
-    Write-Host "Files copied to $destination."
+    # Call Copy-With-Logging function
+    Copy-With-Logging -source "$extractPath\setuplab-main" -destination $destination -logFile $logFile
 
     # Clean up temporary files
     Remove-Item -Path $zipPath -Force
+    Remove-Item -Path $extractPath -Recurse -Force
     Write-Host "Clean up complete."
 }
+
+
+
+
 
 
 
@@ -71,39 +100,39 @@ try {
 
     # Step 1: Download and Extract Setup Lab
     Log-Step
-    $DownloadAndExtractSetupLabParams = @{
+    $params = @{
         repoUrl = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip"
-        destination = $PSScriptRoot
+        destination = "$PSscriptRoot"
+        logFile = "$PSscriptRoot\SetupLabCopy.log"
     }
-    Download-And-Extract-SetupLab @DownloadAndExtractSetupLabParams
-
+    Download-And-Extract-SetupLab @params
     # Step 2: Install Visual Studio Code
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-VSCode.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-VSCode.ps1`""
 
     # Step 3: Install Everything
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-Everything.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-Everything.ps1`""
 
     # Step 4: Install FileLocator Pro
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-FileLocatorPro.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-FileLocatorPro.ps1`""
 
     # Step 5: Install Git
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-Git.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-Git.ps1`""
 
     # Step 6: Install PowerShell 7
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-PowerShell7.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-PowerShell7.ps1`""
 
     # Step 7: Install GitHub Desktop
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-GitHubDesktop.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-GitHubDesktop.ps1`""
 
     # Step 8: Install Windows Terminal
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$scriptRoot\Install-WindowsTerminal.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSscriptRoot\Install-WindowsTerminal.ps1`""
 
 } catch {
     # Capture the error details

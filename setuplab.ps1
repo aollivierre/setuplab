@@ -79,6 +79,8 @@ try {
     Log-Step
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-VSCode.ps1`""
 
+    # $DBG
+
     # Step 3: Install Everything
     Log-Step
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-Everything.ps1`""

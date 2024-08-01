@@ -12,10 +12,16 @@ if (-not (Test-Admin)) {
     Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
+
 function Install-GitHubDesktop {
     $installerPath = [System.IO.Path]::Combine($env:TEMP, 'GitHubDesktop.exe')
-    Write-Host 'Downloading GitHub Desktop...'
-    Invoke-WebRequest -Uri 'https://desktop.githubusercontent.com/github-desktop/releases/3.4.2-27793d93/GitHubDesktopSetup-x64.exe' -OutFile $installerPath | Out-Null
+
+    Write-Host 'Fetching latest GitHub Desktop deployment...'
+    $html = Invoke-WebRequest -Uri 'https://central.github.com/deployments/desktop/desktop/latest/win32' -Headers @{ 'User-Agent' = 'PowerShell' }
+    $downloadUrl = $html.BaseResponse.ResponseUri.AbsoluteUri
+
+    Write-Host "Downloading GitHub Desktop from $downloadUrl..."
+    Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath | Out-Null
     Write-Host 'Download complete.'
 
     Write-Host "Installer path: $installerPath"

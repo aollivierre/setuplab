@@ -6,29 +6,111 @@ function Test-Admin {
     $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+# Function for logging
+function Write-Log {
+    param (
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] [$Level] $Message"
+    Write-Host $logMessage
+
+    # Append to log file
+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-githubdesktop.log')
+    $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
+}
+
 # Elevate to administrator if not already
 if (-not (Test-Admin)) {
-    Write-Host "Restarting script with elevated permissions..."
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    Write-Log "Restarting script with elevated permissions..."
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+        Verb         = "RunAs"
+    }
+    Start-Process @startProcessParams
     exit
+}
+
+function Start-BitsTransferWithRetry {
+    param (
+        [string]$Source,
+        [string]$Destination,
+        [int]$MaxRetries = 3
+    )
+    $attempt = 0
+    $success = $false
+
+    while ($attempt -lt $MaxRetries -and -not $success) {
+        try {
+            $attempt++
+            $bitsTransferParams = @{
+                Source      = $Source
+                Destination = $Destination
+                ErrorAction = "Stop"
+            }
+            Start-BitsTransfer @bitsTransferParams
+            $success = $true
+        } catch {
+            Write-Log "Attempt $attempt failed: $_" -Level "ERROR"
+            if ($attempt -eq $MaxRetries) {
+                throw "Maximum retry attempts reached."
+            }
+            Start-Sleep -Seconds 5
+        }
+    }
 }
 
 function Install-GitHubDesktop {
     $installerPath = [System.IO.Path]::Combine($env:TEMP, 'GitHubDesktop.exe')
 
-    Write-Host 'Fetching latest GitHub Desktop deployment...'
-    $html = Invoke-WebRequest -Uri 'https://central.github.com/deployments/desktop/desktop/latest/win32' -Headers @{ 'User-Agent' = 'PowerShell' }
-    $downloadUrl = $html.BaseResponse.ResponseUri.AbsoluteUri
+    try {
+        Write-Log 'Fetching latest GitHub Desktop deployment...'
+        $invokeWebRequestParams = @{
+            Uri     = 'https://central.github.com/deployments/desktop/desktop/latest/win32'
+            Headers = @{ 'User-Agent' = 'PowerShell' }
+            Method  = 'Head'
+        }
+        $html = Invoke-WebRequest @invokeWebRequestParams
+        $downloadUrl = $html.BaseResponse.ResponseUri.AbsoluteUri
+        Write-Log "Latest GitHub Desktop URL found: $downloadUrl"
+    } catch {
+        Write-Log "Error fetching latest GitHub Desktop deployment: $_" -Level "ERROR"
+        exit 1
+    }
 
-    Write-Host "Downloading GitHub Desktop from $downloadUrl..."
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath | Out-Null
-    Write-Host 'Download complete.'
+    try {
+        Write-Log "Downloading GitHub Desktop from $downloadUrl..."
+        $bitsTransferParams = @{
+            Source      = $downloadUrl
+            Destination = $installerPath
+        }
+        Start-BitsTransferWithRetry @bitsTransferParams
+        Write-Log 'Download complete.'
+    } catch {
+        Write-Log "Error downloading GitHub Desktop: $_" -Level "ERROR"
+        Read-Host 'Press Enter to close this window...'
+        exit 1
+    }
 
-    Write-Host "Installer path: $installerPath"
+    Write-Log "Installer path: $installerPath"
 
-    Write-Host 'Installing GitHub Desktop...'
-    Start-Process -FilePath $installerPath -ArgumentList '/S' -Wait
-    Write-Host 'Installation complete.'
+    try {
+        Write-Log 'Installing GitHub Desktop...'
+        $startProcessParams = @{
+            FilePath     = $installerPath
+            ArgumentList = '/S'
+            Wait         = $true
+        }
+        Start-Process @startProcessParams
+        Write-Log 'Installation complete.'
+    } catch {
+        Write-Log "Error installing GitHub Desktop: $_" -Level "ERROR"
+        Read-Host 'Press Enter to close this window...'
+        exit 1
+    }
+
     Read-Host 'Press Enter to close this window...'
 }
 

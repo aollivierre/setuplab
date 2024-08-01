@@ -1,6 +1,6 @@
 # call using:
 
-# powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/Forticlient/main/Setup.ps1)"
+# powershell -Command "iex (irm https://github.com/aollivierre/setuplab/blob/main/setup.ps1)"
 # powershell -Command "iex (irm https://bit.ly/4doEQ7P)"
 # powershell -Command "iex (irm bit.ly/4doEQ7P)"
 
@@ -64,13 +64,14 @@ Add-Step "Install Git"
 Add-Step "Install PowerShell 7"
 Add-Step "Install GitHub Desktop"
 Add-Step "Install Windows Terminal"
+Add-Step "Enable RDP"
 
 # Main script execution with try-catch for error handling
 try {
     # Step 1: Download and Extract Setup Lab
     Log-Step
     $params = @{
-        repoUrl = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip"
+        repoUrl     = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip"
         destination = $tempFolder
     }
     $extractedPath = Download-And-Extract-SetupLab @params
@@ -105,7 +106,12 @@ try {
     Log-Step
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-WindowsTerminal.ps1`""
 
-} catch {
+    # Step 9 : Enable RDP
+    Log-Step
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Enable-RDP.ps1`""
+
+}
+catch {
     # Capture the error details
     $errorDetails = $_ | Out-String
     Write-Host "An error occurred: $errorDetails" -ForegroundColor Red

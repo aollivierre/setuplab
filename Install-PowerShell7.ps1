@@ -43,13 +43,6 @@ function Install-PowerShell7 {
         Write-Host "PowerShell installation failed. Exit code: $($installProcess.ExitCode)"
         Write-Host "Refer to the log file for more details."
     }
-
-    # Optionally, check if PowerShell was installed successfully
-    if (Get-Command pwsh -ErrorAction SilentlyContinue) {
-        Write-Host "PowerShell has been installed successfully."
-    } else {
-        Write-Host "PowerShell installation did not complete successfully."
-    }
 }
 
 # Call the Install-PowerShell7 function

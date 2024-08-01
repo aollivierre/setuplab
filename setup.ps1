@@ -1,8 +1,8 @@
 # call using:
 
 # powershell -Command "iex (irm https://github.com/aollivierre/setuplab/blob/main/setup.ps1)"
-# powershell -Command "iex (irm https://bit.ly/4doEQ7P)"
-# powershell -Command "iex (irm bit.ly/4doEQ7P)"
+# powershell -Command "iex (irm https://bit.ly/3WC0w9Y)"
+# powershell -Command "iex (irm bit.ly/3WC0w9Y)"
 
 # Define a temporary folder path with timestamp
 $timestamp = Get-Date -Format "yyyyMMddHHmmss"

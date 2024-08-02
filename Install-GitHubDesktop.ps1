@@ -64,21 +64,7 @@ function Start-BitsTransferWithRetry {
 
 function Install-GitHubDesktop {
     $installerPath = [System.IO.Path]::Combine($env:TEMP, 'GitHubDesktop.exe')
-
-    try {
-        Write-Log 'Fetching latest GitHub Desktop deployment...'
-        $invokeWebRequestParams = @{
-            Uri     = 'https://central.github.com/deployments/desktop/desktop/latest/win32'
-            Headers = @{ 'User-Agent' = 'PowerShell' }
-            Method  = 'Head'
-        }
-        $html = Invoke-WebRequest @invokeWebRequestParams
-        $downloadUrl = $html.BaseResponse.ResponseUri.AbsoluteUri
-        Write-Log "Latest GitHub Desktop URL found: $downloadUrl"
-    } catch {
-        Write-Log "Error fetching latest GitHub Desktop deployment: $_" -Level "ERROR"
-        exit 1
-    }
+    $downloadUrl = 'https://central.github.com/deployments/desktop/desktop/latest/win32'
 
     try {
         Write-Log "Downloading GitHub Desktop from $downloadUrl..."
@@ -90,7 +76,6 @@ function Install-GitHubDesktop {
         Write-Log 'Download complete.'
     } catch {
         Write-Log "Error downloading GitHub Desktop: $_" -Level "ERROR"
-        Read-Host 'Press Enter to close this window...'
         exit 1
     }
 
@@ -107,7 +92,6 @@ function Install-GitHubDesktop {
         Write-Log 'Installation complete.'
     } catch {
         Write-Log "Error installing GitHub Desktop: $_" -Level "ERROR"
-        Read-Host 'Press Enter to close this window...'
         exit 1
     }
 

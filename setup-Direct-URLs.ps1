@@ -1,7 +1,3 @@
-# Define a temporary folder path with timestamp
-$timestamp = Get-Date -Format "yyyyMMddHHmmss"
-$tempFolder = "$env:TEMP\SetupLab_$timestamp"
-
 # Initialize the global steps list
 $global:steps = [System.Collections.Generic.List[PSCustomObject]]::new()
 $global:currentStep = 0

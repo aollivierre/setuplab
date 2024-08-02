@@ -1,5 +1,4 @@
 # call using:
-
 # powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/setuplab/main/setup.ps1)"
 # powershell -Command "iex (irm https://bit.ly/4c3XH76)"
 # powershell -Command "iex (irm bit.ly/4c3XH76)"
@@ -30,7 +29,7 @@ function Log-Step {
     Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription"
 }
 
-# Download-And-Extract-SetupLab.ps1
+# Function to download and extract SetupLab repository
 function Download-And-Extract-SetupLab {
     param (
         [string]$repoUrl = "https://github.com/aollivierre/setuplab/archive/refs/heads/main.zip",
@@ -46,11 +45,20 @@ function Download-And-Extract-SetupLab {
     $extractPath = "$env:TEMP\SetupLab_$timestamp"
 
     Write-Host "Downloading SetupLab repository from GitHub..."
-    Invoke-WebRequest -Uri $repoUrl -OutFile $zipPath
+    $invokeWebRequestParams = @{
+        Uri     = $repoUrl
+        OutFile = $zipPath
+    }
+    Invoke-WebRequest @invokeWebRequestParams
     Write-Host "Download complete."
 
     Write-Host "Extracting SetupLab repository..."
-    Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+    $expandArchiveParams = @{
+        Path           = $zipPath
+        DestinationPath = $extractPath
+        Force          = $true
+    }
+    Expand-Archive @expandArchiveParams
     Write-Host "Extraction complete."
 
     # Return the extraction path
@@ -80,37 +88,67 @@ try {
 
     # Step 2: Install Visual Studio Code
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-VSCode.ps1`""
-
-    # $DBG
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-VSCode.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 3: Install Everything
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-Everything.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-Everything.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 4: Install FileLocator Pro
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-FileLocatorPro.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-FileLocatorPro.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 5: Install Git
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-Git.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-Git.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 6: Install PowerShell 7
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-PowerShell7.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-PowerShell7.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 7: Install GitHub Desktop
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-GitHubDesktop.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-GitHubDesktop.ps1")
+    }
+    Start-Process @startProcessParams
 
     # Step 8: Install Windows Terminal
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Install-WindowsTerminal.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Install-WindowsTerminal.ps1")
+    }
+    Start-Process @startProcessParams
 
-    # Step 9 : Enable RDP
+    # Step 9: Enable RDP
     Log-Step
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$extractedPath\Enable-RDP.ps1`""
+    $startProcessParams = @{
+        FilePath     = "powershell.exe"
+        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "$extractedPath\Enable-RDP.ps1")
+    }
+    Start-Process @startProcessParams
 
 }
 catch {
@@ -119,3 +157,5 @@ catch {
     Write-Host "An error occurred: $errorDetails" -ForegroundColor Red
     throw
 }
+
+

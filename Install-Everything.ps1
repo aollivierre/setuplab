@@ -1,4 +1,4 @@
-﻿# Install-Everything.ps1
+# Install-Everything.ps1
 
 # Function to check if running as administrator
 function Test-Admin {

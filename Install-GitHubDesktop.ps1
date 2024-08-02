@@ -1,5 +1,4 @@
 # Install-GitHubDesktop.ps1
-write-host 'version 2'
 
 # Function to check if running as administrator
 function Test-Admin {

@@ -19,5 +19,5 @@
 ### If you are already in PowerShell (URL is case sensitive):
 
   ```powershell
-    iex (irm bit.ly/4c3XH76)
+  iex (irm bit.ly/4c3XH76)
   ```

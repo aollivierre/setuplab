@@ -56,40 +56,41 @@ function Test-Url {
 }
 
 # Function to execute scripts with retry
-function Execute-ScriptWithRetry {
-    param (
-        [string]$url,
-        [int]$maxRetries = 3,
-        [string]$powerShellPath
-    )
-    $attempt = 0
-    $success = $false
+# ToDO - Test the following and replace the main logic with this function as it has the potential of doing wait and retry mechanism
+# function Execute-ScriptWithRetry {
+#     param (
+#         [string]$url,
+#         [int]$maxRetries = 3,
+#         [string]$powerShellPath
+#     )
+#     $attempt = 0
+#     $success = $false
 
-    while ($attempt -lt $maxRetries -and -not $success) {
-        try {
-            $attempt++
-            $scriptContent = Invoke-RestMethod -Uri $url
-            $scriptPath = [System.IO.Path]::Combine($env:TEMP, [System.IO.Path]::GetFileName($url))
-            $scriptContent | Out-File -FilePath $scriptPath -Encoding utf8
+#     while ($attempt -lt $maxRetries -and -not $success) {
+#         try {
+#             $attempt++
+#             $scriptContent = Invoke-RestMethod -Uri $url
+#             $scriptPath = [System.IO.Path]::Combine($env:TEMP, [System.IO.Path]::GetFileName($url))
+#             $scriptContent | Out-File -FilePath $scriptPath -Encoding utf8
 
-            $startProcessParams = @{
-                FilePath     = $powerShellPath
-                ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scriptPath)
-                Verb         = "RunAs"
-            }
-            Start-Process @startProcessParams -Wait
+#             $startProcessParams = @{
+#                 FilePath     = $powerShellPath
+#                 ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scriptPath)
+#                 Verb         = "RunAs"
+#             }
+#             Start-Process @startProcessParams -Wait
 
-            Write-Log "Script executed successfully: $url" -Level "INFO"
-            $success = $true
-        } catch {
-            Write-Log "Attempt $attempt failed for script $url $_" -Level "ERROR"
-            if ($attempt -eq $maxRetries) {
-                throw "Maximum retry attempts reached for script $url."
-            }
-            Start-Sleep -Seconds 5
-        }
-    }
-}
+#             Write-Log "Script executed successfully: $url" -Level "INFO"
+#             $success = $true
+#         } catch {
+#             Write-Log "Attempt $attempt failed for script $url $_" -Level "ERROR"
+#             if ($attempt -eq $maxRetries) {
+#                 throw "Maximum retry attempts reached for script $url."
+#             }
+#             Start-Sleep -Seconds 5
+#         }
+#     }
+# }
 
 # Function to get PowerShell path
 function Get-PowerShellPath {

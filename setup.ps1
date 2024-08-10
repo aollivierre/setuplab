@@ -105,6 +105,7 @@ function Get-PowerShellPath {
 
 # Define the GitHub URLs of the scripts
 $scriptUrls = @(
+    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1",
     "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1",
     "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Everything.ps1",
     "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1",

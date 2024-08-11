@@ -1,3 +1,7 @@
+# Initialize the total and completed steps
+$totalSteps = 6
+$completedSteps = 0
+
 # Function to check if running as administrator
 function Test-Admin {
     $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -19,92 +23,99 @@ function Write-Log {
     $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
 }
 
-# Function to check and add user to group if not present
-function Add-UserToGroupIfNotPresent {
-    param (
-        [string]$groupName,
-        [string]$userName
-    )
+# Function to validate RDP and "Everyone" group membership
+function Validate-RDPConfiguration {
+    $rdpEnabled = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections").fDenyTSConnections -eq 0
+    $groupMembers = net localgroup "Remote Desktop Users"
+    $everyoneAdded = $groupMembers -match "Everyone"
 
-    try {
-        Write-Log "Checking if user '$userName' is a member of group '$groupName'..."
-        $userExists = Get-LocalGroupMember -Group $groupName -ErrorAction Stop | Where-Object { $_.Name -eq $userName }
-
-        if ($userExists) {
-            Write-Log "User '$userName' is already a member of group '$groupName'." -Level "INFO"
-        } else {
-            Write-Log "User '$userName' is NOT a member of group '$groupName'. Adding user to the group..." -Level "INFO"
-            Add-LocalGroupMember -Group $groupName -Member $userName
-            Write-Log "User '$userName' has been added to group '$groupName'." -Level "INFO"
-        }
-    } catch {
-        if ($_.Exception.Message -match "is already a member of group") {
-            Write-Log "User '$userName' is already a member of group '$groupName'." -Level "INFO"
-        } else {
-            Write-Log "Failed to check or add user '$userName' to group '$groupName'. Error: $_" -Level "ERROR"
-        }
+    return @{
+        IsRDPEnabled = $rdpEnabled
+        IsEveryoneAdded = $everyoneAdded
     }
 }
 
-# Function to verify user permissions in the group
-function Verify-Permissions {
-    param (
-        [string]$groupName,
-        [string]$userName
-    )
-
-    Write-Log "Verifying permissions for user '$userName' in group '$groupName'..."
-
-    try {
-        $member = Get-LocalGroupMember -Group $groupName -ErrorAction Stop | Where-Object { $_.Name -eq $userName }
-        if ($member) {
-            Write-Log "User '$userName' has the necessary permissions in the group '$groupName'." -Level "INFO"
-        } else {
-            Write-Log "User '$userName' does NOT have the necessary permissions in the group '$groupName'." -Level "ERROR"
-        }
-    } catch {
-        Write-Log "Failed to verify permissions for user '$userName' in group '$groupName'. Error: $_" -Level "ERROR"
-    }
-}
-
+# Function to enable RDP and configure "Everyone" group membership
 function Enable-RDP {
+    # Step 1: Pre-configuration validation
+    Write-Log "Step 1: Validating if RDP is already enabled and 'Everyone' is in the Remote Desktop Users group..."
+    $preConfigCheck = Validate-RDPConfiguration
+    if ($preConfigCheck.IsRDPEnabled -and $preConfigCheck.IsEveryoneAdded) {
+        Write-Log "RDP is already enabled and 'Everyone' is already in the Remote Desktop Users group." -Level "INFO"
+        return
+    }
+    $completedSteps++
+
+    # Step 2: Enable RDP by setting the necessary registry keys
+    Write-Log "Step 2: Enabling RDP by setting the necessary registry keys..."
     try {
-        # Enable RDP by setting the necessary registry keys
-        Write-Log "Enabling Remote Desktop..."
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Write-Log "RDP is now enabled." -Level "INFO"
+    }
+    catch {
+        Write-Log "Failed to enable RDP: $_" -Level "ERROR"
+        return
+    }
+    $completedSteps++
 
-        # Enable the RDP firewall rule
-        Write-Log "Enabling RDP firewall rule..."
+    # Step 3: Enable the RDP firewall rule
+    Write-Log "Step 3: Enabling RDP firewall rule..."
+    try {
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Write-Log "RDP firewall rule enabled." -Level "INFO"
+    }
+    catch {
+        Write-Log "Failed to enable RDP firewall rule: $_" -Level "ERROR"
+        return
+    }
+    $completedSteps++
 
-        # Add "Everyone" to Remote Desktop Users group using net localgroup command
-        Write-Log "Adding 'Everyone' to Remote Desktop Users group..."
+    # Step 4: Add "Everyone" to the Remote Desktop Users group
+    Write-Log "Step 4: Adding 'Everyone' to the Remote Desktop Users group..."
+    try {
         net localgroup "Remote Desktop Users" "Everyone" /add | Out-Null
+        Write-Log "'Everyone' added to the Remote Desktop Users group." -Level "INFO"
+    }
+    catch {
+        Write-Log "Failed to add 'Everyone' to the Remote Desktop Users group: $_" -Level "ERROR"
+        return
+    }
+    $completedSteps++
 
-        # Validate RDP is enabled
-        $rdpEnabled = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections").fDenyTSConnections -eq 0
-        if ($rdpEnabled) {
-            Write-Log "RDP is enabled successfully."
-        } else {
-            Write-Log "Failed to enable RDP." -Level "ERROR"
-            return
+    # Step 5: Post-configuration validation with retry mechanism
+    Write-Log "Step 5: Validating RDP and 'Everyone' in the Remote Desktop Users group after enabling..."
+    $maxRetries = 3
+    $retryCount = 0
+    $delayBetweenRetries = 5  # Delay in seconds
+
+    $validationSucceeded = $false
+    while ($retryCount -lt $maxRetries -and -not $validationSucceeded) {
+        Start-Sleep -Seconds $delayBetweenRetries  # Wait before checking
+        $postConfigCheck = Validate-RDPConfiguration
+        if ($postConfigCheck.IsRDPEnabled -and $postConfigCheck.IsEveryoneAdded) {
+            Write-Log "Validation successful: RDP is enabled and 'Everyone' is in the Remote Desktop Users group." -Level "INFO"
+            $validationSucceeded = $true
+            $completedSteps++
         }
-
-        # Validate "Everyone" is in the Remote Desktop Users group
-        $groupMembers = net localgroup "Remote Desktop Users"
-        $everyoneAdded = $groupMembers -match "Everyone"
-        if ($everyoneAdded) {
-            Write-Log "'Everyone' is successfully added to the Remote Desktop Users group."
-        } else {
-            Write-Log "Failed to add 'Everyone' to the Remote Desktop Users group." -Level "ERROR"
+        else {
+            Write-Log "Validation attempt $($retryCount + 1) failed: RDP or group membership is not configured correctly." -Level "ERROR"
         }
-
-        Write-Log "Remote Desktop enabled and 'Everyone' added to Remote Desktop Users group."
-    } catch {
-        Write-Log "An error occurred: $_" -Level "ERROR"
+        $retryCount++
     }
 
-    # Prevent the window from closing immediately
+    if (-not $validationSucceeded) {
+        Write-Log "Validation failed after $maxRetries attempts: RDP or group membership was not configured correctly." -Level "ERROR"
+    }
+
+    # Step 6: Summary report
+    Write-Host "Summary: $completedSteps out of $totalSteps steps completed successfully." -ForegroundColor Cyan
+    if ($completedSteps -eq $totalSteps) {
+        Write-Host "RDP was enabled and 'Everyone' was added to the Remote Desktop Users group successfully." -ForegroundColor Green
+    }
+    else {
+        Write-Host "There were issues during the configuration. Please check the log for details." -ForegroundColor Red
+    }
+
     Read-Host 'Press Enter to close this window...'
 }
 

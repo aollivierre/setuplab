@@ -1,6 +1,8 @@
 # Initialize the global steps list
 $global:steps = [System.Collections.Generic.List[PSCustomObject]]::new()
 $global:currentStep = 0
+$processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
+$installationResults = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 # Function to add a step
 function Add-Step {
@@ -15,10 +17,10 @@ function Log-Step {
     $global:currentStep++
     $totalSteps = $global:steps.Count
     $stepDescription = $global:steps[$global:currentStep - 1].Description
-    Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription"
+    Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription" -ForegroundColor Cyan
 }
 
-# Function for logging
+# Function for logging with color coding
 function Write-Log {
     param (
         [string]$Message,
@@ -26,7 +28,13 @@ function Write-Log {
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
+    
+    switch ($Level) {
+        "INFO" { Write-Host $logMessage -ForegroundColor Green }
+        "ERROR" { Write-Host $logMessage -ForegroundColor Red }
+        "WARNING" { Write-Host $logMessage -ForegroundColor Yellow }
+        default { Write-Host $logMessage -ForegroundColor White }
+    }
 
     # Append to log file
     $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-scripts.log')
@@ -57,50 +65,72 @@ function Get-PowerShellPath {
     }
 }
 
-# Function to validate software installation via registry
+
+# Function to validate software installation via registry with retry mechanism
 function Validate-Installation {
     param (
         [string]$SoftwareName,
-        [version]$MinVersion = [version]"0.0.0.0"
+        [version]$MinVersion = [version]"0.0.0.0",
+        [int]$MaxRetries = 3,
+        [int]$DelayBetweenRetries = 5  # Delay in seconds
     )
 
-    $registryPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-    )
+    if ($SoftwareName -eq "RDP") {
+        return @{ IsInstalled = $false }  # Force the RDP script to always run
+    }
 
-    foreach ($path in $registryPaths) {
-        $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+    $retryCount = 0
+    $validationSucceeded = $false
 
-        foreach ($item in $items) {
-            $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
-            if ($app.DisplayName -like "*$SoftwareName*") {
-                $installedVersion = [version]$app.DisplayVersion
-                if ($installedVersion -ge $MinVersion) {
-                    return @{
-                        IsInstalled = $true
-                        Version = $installedVersion
-                        ProductCode = $app.PSChildName
+    while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
+        $registryPaths = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"  # Include HKCU for user-installed apps
+        )
+
+        foreach ($path in $registryPaths) {
+            $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+
+            foreach ($item in $items) {
+                $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
+                if ($app.DisplayName -like "*$SoftwareName*") {
+                    $installedVersion = [version]$app.DisplayVersion
+                    if ($installedVersion -ge $MinVersion) {
+                        return @{
+                            IsInstalled = $true
+                            Version     = $installedVersion
+                            ProductCode = $app.PSChildName
+                        }
                     }
                 }
             }
+        }
+
+        $retryCount++
+        if (-not $validationSucceeded) {
+            Write-Log "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "ERROR"
+            Start-Sleep -Seconds $DelayBetweenRetries
         }
     }
 
     return @{IsInstalled = $false}
 }
 
+
+
+
 # Define the GitHub URLs of the scripts and corresponding software names
 $scriptDetails = @(
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1"; SoftwareName = "7-Zip"; MinVersion = [version]"24.07.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1"; SoftwareName = "Visual Studio Code"; MinVersion = [version]"1.92.1.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1"; SoftwareName = "Visual Studio Code"; MinVersion = [version]"1.82.1.0" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Everything.ps1"; SoftwareName = "Everything"; MinVersion = [version]"1.4.1.1024" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.0.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.0.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.0.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"2.0.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.0.0.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } # Adjust for actual validation, if possible
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.5.2968" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.3.6.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.17.11461.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
 )
 
 # Add steps for each script
@@ -117,27 +147,72 @@ try {
         $softwareName = $detail.SoftwareName
         $minVersion = $detail.MinVersion
 
-        if (Test-Url -url $url) {
-            Log-Step
-            Write-Log "Running script from URL: $url"
-            $startProcessParams = @{
-                FilePath     = $powerShellPath
-                ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')")
-                Verb         = "RunAs"
-            }
-            Start-Process @startProcessParams | Wait-Process
-
-            # Validate installation
-            Write-Log "Validating installation of $softwareName..."
-            $installationCheck = Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion
-            if ($installationCheck.IsInstalled) {
-                Write-Log "Validation successful: $softwareName version $($installationCheck.Version) is installed."
-            } else {
-                Write-Log "Validation failed: $softwareName was not found on the system." -Level "ERROR"
-            }
+        # Validate before running the installation script
+        Write-Log "Validating existing installation of $softwareName..."
+        $installationCheck = Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
+        if ($installationCheck.IsInstalled) {
+            Write-Log "$softwareName version $($installationCheck.Version) is already installed. Skipping installation." -Level "INFO"
+            $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Already Installed"; VersionFound = $installationCheck.Version })
         } else {
-            Write-Log "URL $url is not accessible" -Level "ERROR"
+            if (Test-Url -url $url) {
+                Log-Step
+                Write-Log "Running script from URL: $url" -Level "INFO"
+                $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
+                $processList.Add($process)
+
+                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })
+            } else {
+                Write-Log "URL $url is not accessible" -Level "ERROR"
+                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Failed - URL Not Accessible"; VersionFound = "N/A" })
+            }
         }
+    }
+
+    # Wait for all processes to complete
+    foreach ($process in $processList) {
+        $process.WaitForExit()
+    }
+
+    # Post-installation validation
+    foreach ($result in $installationResults) {
+        if ($result.Status -eq "Installed") {
+            Write-Log "Validating installation of $($result.SoftwareName)..."
+            $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion $scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName } | Select-Object -ExpandProperty MinVersion
+
+            if ($validationResult.IsInstalled) {
+                Write-Log "Validation successful: $($result.SoftwareName) version $($validationResult.Version) is installed." -Level "INFO"
+                $result.VersionFound = $validationResult.Version
+                $result.Status = "Successfully Installed"
+            } else {
+                Write-Log "Validation failed: $($result.SoftwareName) was not found on the system." -Level "ERROR"
+                $result.Status = "Failed - Not Found After Installation"
+            }
+        }
+    }
+
+    # Summary report
+    $totalSoftware = $installationResults.Count
+    $successfulInstallations = $installationResults | Where-Object { $_.Status -eq "Successfully Installed" }
+    $alreadyInstalled = $installationResults | Where-Object { $_.Status -eq "Already Installed" }
+    $failedInstallations = $installationResults | Where-Object { $_.Status -like "Failed*" }
+
+    Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
+
+    #Here's the continuation and finalization of the script to include a summary report after all processes have completed:
+
+
+    Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
+    Write-Host "Successful Installations: $($successfulInstallations.Count)" -ForegroundColor Green
+    Write-Host "Already Installed: $($alreadyInstalled.Count)" -ForegroundColor Yellow
+    Write-Host "Failed Installations: $($failedInstallations.Count)" -ForegroundColor Red
+
+    # Detailed Summary
+    Write-Host "`nDetailed Summary:" -ForegroundColor Cyan
+    $installationResults | ForEach-Object {
+        Write-Host "Software: $($_.SoftwareName)" -ForegroundColor White
+        Write-Host "Status: $($_.Status)" -ForegroundColor White
+        Write-Host "Version Found: $($_.VersionFound)" -ForegroundColor White
+        Write-Host "----------------------------------------" -ForegroundColor Gray
     }
 }
 catch {

@@ -33,6 +33,7 @@ if (-not (Test-Admin)) {
     exit
 }
 
+# Function to download files with retry logic
 function Start-BitsTransferWithRetry {
     param (
         [string]$Source,
@@ -45,23 +46,23 @@ function Start-BitsTransferWithRetry {
     while ($attempt -lt $MaxRetries -and -not $success) {
         try {
             $attempt++
-            $bitsTransferParams = @{
-                Source      = $Source
-                Destination = $Destination
-                ErrorAction = "Stop"
+            if (-not (Test-Path -Path (Split-Path $Destination -Parent))) {
+                throw "Destination path does not exist: $(Split-Path $Destination -Parent)"
             }
-            Start-BitsTransfer @bitsTransferParams
+            Start-BitsTransfer -Source $Source -Destination $Destination -ErrorAction Stop
             $success = $true
-        } catch {
+        }
+        catch {
             Write-Log "Attempt $attempt failed: $_" -Level "ERROR"
             if ($attempt -eq $MaxRetries) {
-                throw "Maximum retry attempts reached."
+                throw "Maximum retry attempts reached. Download failed."
             }
             Start-Sleep -Seconds 5
         }
     }
 }
 
+# Function to get the latest download URL for Everything
 function Get-LatestEverythingUrl {
     try {
         Write-Log "Fetching the latest Everything release info..."
@@ -76,48 +77,138 @@ function Get-LatestEverythingUrl {
 
         Write-Log "Latest Everything URL found: $downloadUrl"
         return $downloadUrl
-    } catch {
+    }
+    catch {
         Write-Log "Error fetching the latest Everything release info: $_" -Level "ERROR"
         exit 1
     }
 }
 
-function Install-Everything {
-    $installerPath = [System.IO.Path]::Combine($env:TEMP, 'Everything.exe')
+# Function to validate Everything installation via registry
+function Validate-EverythingInstallation {
+    $registryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+    $softwareName = "*Everything*"
+    $minVersion = New-Object Version "1.4.1.1026"  # Adjust this version as needed
 
-    try {
-        $url = Get-LatestEverythingUrl
-        Write-Log "Downloading Everything from $url..."
-        $bitsTransferParams = @{
-            Source      = $url
-            Destination = $installerPath
+    foreach ($path in $registryPaths) {
+        if (-not (Test-Path $path)) {
+            Write-Log "Registry path not found: $path" -Level "ERROR"
+            continue
         }
-        Start-BitsTransferWithRetry @bitsTransferParams
-        Write-Log 'Download complete.'
-    } catch {
-        Write-Log "Error downloading Everything: $_" -Level "ERROR"
-        Read-Host 'Press Enter to close this window...'
-        exit 1
+
+        $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+        foreach ($item in $items) {
+            $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
+            if ($app.DisplayName -like $softwareName) {
+                $installedVersion = New-Object Version $app.DisplayVersion
+                if ($installedVersion -ge $minVersion) {
+                    return @{
+                        IsInstalled = $true
+                        Version     = $installedVersion
+                        ProductCode = $app.PSChildName
+                    }
+                }
+            }
+        }
     }
 
-    Write-Log "Installer path: $installerPath"
+    return @{IsInstalled = $false }
+}
 
+
+# Main function to install Everything
+function Install-Everything {
+    $totalSteps = 5  # Updated to reflect the correct number of steps
+    $completedSteps = 0
+
+    # Step 1: Pre-installation validation
+    Write-Log "Step 1: Validating existing installation of Everything..."
+    $preInstallCheck = Validate-EverythingInstallation
+    if ($preInstallCheck.IsInstalled) {
+        Write-Log "Everything version $($preInstallCheck.Version) is already installed. Skipping installation." -Level "INFO"
+        return
+    }
+    else {
+        Write-Log "Everything is not currently installed." -Level "INFO"
+    }
+    $completedSteps++
+
+    # Step 2: Fetching the latest Everything release info
+    Write-Log "Step 2: Fetching the latest Everything release info..."
     try {
-        Write-Log 'Installing Everything...'
+        $url = Get-LatestEverythingUrl
+    }
+    catch {
+        Write-Log "Error fetching release info: $_" -Level "ERROR"
+        exit 1
+    }
+    $completedSteps++
+
+    # Step 3: Downloading Everything installer
+    Write-Log "Step 3: Downloading Everything installer from $url..."
+    $installerPath = [System.IO.Path]::Combine($env:TEMP, 'Everything.exe')
+    try {
+        Start-BitsTransferWithRetry -Source $url -Destination $installerPath
+        Write-Log "Downloaded Everything installer to $installerPath"
+    }
+    catch {
+        Write-Log "Error downloading Everything installer: $_" -Level "ERROR"
+        exit 1
+    }
+    $completedSteps++
+
+    # Step 4: Installing Everything
+    Write-Log "Step 4: Installing Everything..."
+    try {
         $startProcessParams = @{
             FilePath     = $installerPath
             ArgumentList = '/S'
             Wait         = $true
         }
-        Start-Process @startProcessParams
-        Write-Log 'Installation complete.'
-    } catch {
+        Start-Process @startProcessParams | Wait-Process
+        Write-Log "Everything installation complete."
+    }
+    catch {
         Write-Log "Error installing Everything: $_" -Level "ERROR"
-        Read-Host 'Press Enter to close this window...'
         exit 1
     }
+    $completedSteps++
 
-    Read-Host 'Press Enter to close this window...'
+    # Step 5: Post-installation validation with retry mechanism
+    Write-Log "Step 5: Validating Everything installation..."
+    $maxRetries = 3
+    $retryCount = 0
+    $delayBetweenRetries = 5  # Delay in seconds
+
+    $validationSucceeded = $false
+    while ($retryCount -lt $maxRetries -and -not $validationSucceeded) {
+        Start-Sleep -Seconds $delayBetweenRetries  # Wait before checking
+        $postInstallCheck = Validate-EverythingInstallation
+        if ($postInstallCheck.IsInstalled) {
+            Write-Log "Validation successful: Everything version $($postInstallCheck.Version) is installed."
+            $validationSucceeded = $true
+            $completedSteps++
+        }
+        else {
+            Write-Log "Validation attempt $($retryCount + 1) failed: Everything was not found on the system." -Level "ERROR"
+        }
+        $retryCount++
+    }
+
+    if (-not $validationSucceeded) {
+        Write-Log "Validation failed after $maxRetries attempts: Everything was not found on the system." -Level "ERROR"
+    }
+
+    Write-Host "Summary: $completedSteps out of $totalSteps steps completed successfully." -ForegroundColor Cyan
+    if ($completedSteps -eq $totalSteps) {
+        Write-Host "Everything was installed and validated successfully." -ForegroundColor Green
+    }
+    else {
+        Write-Host "There were issues during the installation. Please check the log for details." -ForegroundColor Red
+    }
 }
 
 # Call the Install-Everything function

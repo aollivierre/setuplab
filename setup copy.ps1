@@ -120,6 +120,7 @@ function Validate-Installation {
 
 
 
+
 # Define the GitHub URLs of the scripts and corresponding software names
 $scriptDetails = @(
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1"; SoftwareName = "7-Zip"; MinVersion = [version]"24.07.0.0" },
@@ -157,7 +158,7 @@ try {
             if (Test-Url -url $url) {
                 Log-Step
                 Write-Log "Running script from URL: $url" -Level "INFO"
-                $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
+                $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
                 $processList.Add($process)
 
                 $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })
@@ -195,11 +196,6 @@ try {
     $successfulInstallations = $installationResults | Where-Object { $_.Status -eq "Successfully Installed" }
     $alreadyInstalled = $installationResults | Where-Object { $_.Status -eq "Already Installed" }
     $failedInstallations = $installationResults | Where-Object { $_.Status -like "Failed*" }
-
-    Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
-
-    #Here's the continuation and finalization of the script to include a summary report after all processes have completed:
-
 
     Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
     Write-Host "Successful Installations: $($successfulInstallations.Count)" -ForegroundColor Green

@@ -24,7 +24,7 @@ if (-not (Test-Admin)) {
     Write-Log "Restarting script with elevated permissions..."
     $startProcessParams = @{
         FilePath     = "powershell.exe"
-        ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+        ArgumentList = @("NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
         Verb         = "RunAs"
     }
     Start-Process @startProcessParams
@@ -66,25 +66,60 @@ function Start-BitsTransferWithRetry {
 }
 
 
-# Function to validate the installation of GitHub Desktop
+# Function to validate the installation of GitHub Desktop with splat parameters
 function Validate-GitHubDesktopInstallation {
-    $registryPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GitHubDesktop"
-    $minVersion = New-Object Version "3.4.3"  # Adjust this version as needed
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$RegistryPath,
+        
+        [Parameter(Mandatory=$true)]
+        [version]$MinVersion,
+        
+        [Parameter(Mandatory=$true)]
+        [int]$MaxRetries,
+        
+        [Parameter(Mandatory=$true)]
+        [int]$DelayBetweenRetries
+    )
+    
+    $retryCount = 0
+    $validationSucceeded = $false
 
-    if (Test-Path $registryPath) {
-        $app = Get-ItemProperty -Path $registryPath
-        $installedVersion = New-Object Version $app.DisplayVersion
-        if ($installedVersion -ge $minVersion) {
-            return @{
-                IsInstalled = $true
-                Version     = $installedVersion
-                ProductCode = $app.PSChildName
+    while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
+        if (Test-Path $RegistryPath) {
+            $app = Get-ItemProperty -Path $RegistryPath
+            $installedVersion = New-Object Version $app.DisplayVersion
+            if ($installedVersion -ge $MinVersion) {
+                return @{
+                    IsInstalled = $true
+                    Version     = $installedVersion
+                    ProductCode = $app.PSChildName
+                }
             }
+        }
+
+        $retryCount++
+        if (-not $validationSucceeded) {
+            Write-Log "Validation attempt $retryCount failed: GitHub Desktop not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "ERROR"
+            Start-Sleep -Seconds $DelayBetweenRetries
         }
     }
 
-    return @{IsInstalled = $false }
+    return @{IsInstalled = $false}
 }
+
+
+
+# # Example usage with splatting
+# $validationParams = @{
+#     RegistryPath        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GitHubDesktop"
+#     MinVersion          = [version]"3.4.3"
+#     MaxRetries          = 3
+#     DelayBetweenRetries = 5  # Delay in seconds
+# }
+
+# $validationResult = Validate-GitHubDesktopInstallation -Params $validationParams
+
 
 
 
@@ -96,7 +131,15 @@ function Install-GitHubDesktop {
 
     # Step 1: Pre-installation validation
     Write-Log "Step 1: Validating existing installation of GitHub Desktop..."
-    $preInstallCheck = Validate-GitHubDesktopInstallation
+    
+    $preValidationParams = @{
+        RegistryPath        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GitHubDesktop"
+        MinVersion          = [version]"3.4.3"
+        MaxRetries          = 3
+        DelayBetweenRetries = 5  # Delay in seconds
+    }
+    $preInstallCheck = Validate-GitHubDesktopInstallation @preValidationParams
+    
     if ($preInstallCheck.IsInstalled) {
         Write-Log "GitHub Desktop version $($preInstallCheck.Version) is already installed. Skipping installation." -Level "INFO"
         return
@@ -120,7 +163,6 @@ function Install-GitHubDesktop {
 
     Write-Log "Installer path: $installerPath"
 
- 
     # Step 3: Installing GitHub Desktop
     Write-Log "Step 3: Installing GitHub Desktop..."
     try {
@@ -139,32 +181,23 @@ function Install-GitHubDesktop {
     }
     $completedSteps++
 
-
     # Step 4: Post-installation validation
     Write-Log "Step 4: Validating GitHub Desktop installation..."
-    $maxRetries = 3
-    $retryCount = 0
-    $delayBetweenRetries = 5  # Delay in seconds
-
-    $validationSucceeded = $false
-    while ($retryCount -lt $maxRetries -and -not $validationSucceeded) {
-        Start-Sleep -Seconds $delayBetweenRetries  # Wait before checking
-        $postInstallCheck = Validate-GitHubDesktopInstallation
-        if ($postInstallCheck.IsInstalled) {
-            Write-Log "Validation successful: GitHub Desktop version $($postInstallCheck.Version) is installed."
-            $validationSucceeded = $true
-            $completedSteps++
-        }
-        else {
-            Write-Log "Validation attempt $($retryCount + 1) failed: GitHub Desktop was not found on the system." -Level "ERROR"
-        }
-        $retryCount++
+    
+    $postValidationParams = @{
+        RegistryPath        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GitHubDesktop"
+        MinVersion          = [version]"3.4.3"
+        MaxRetries          = 3
+        DelayBetweenRetries = 5  # Delay in seconds
     }
-
-    if (-not $validationSucceeded) {
-        Write-Log "Validation failed after $maxRetries attempts: GitHub Desktop was not found on the system." -Level "ERROR"
+    
+    $postInstallCheck = Validate-GitHubDesktopInstallation @postValidationParams
+    if ($postInstallCheck.IsInstalled) {
+        Write-Log "Validation successful: GitHub Desktop version $($postInstallCheck.Version) is installed."
+        $completedSteps++
+    } else {
+        Write-Log "Validation failed after $($postValidationParams['MaxRetries']) attempts: GitHub Desktop was not found on the system." -Level "ERROR"
     }
-
 
     # Step 5: Cleaning up temporary files...
     Write-Log "Step 5: Cleaning up temporary files..."
@@ -181,9 +214,8 @@ function Install-GitHubDesktop {
     }
     $completedSteps++
 
-
     # Adjust the completed steps calculation
-    if ($validationSucceeded) {
+    if ($postInstallCheck.IsInstalled) {
         $completedSteps++  # Only increment if validation ultimately succeeds
     }
 
@@ -195,7 +227,6 @@ function Install-GitHubDesktop {
     else {
         Write-Host "There were issues during the installation. Please check the log for details." -ForegroundColor Red
     }
-
 
     Read-Host 'Press Enter to close this window...'
 }

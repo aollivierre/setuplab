@@ -162,6 +162,9 @@ function Install-VCppRedist {
     $vcppPath = "$env:TEMP\vc_redist_$arch.exe"
     $minVersion = [version]"14.40.33810.0"  # Adjust as necessary
 
+
+    Test-Admin
+
     # Step 1: Pre-installation validation
     Add-Step "Validating existing installation of Visual C++ Redistributable ($arch)..."
     Log-Step
@@ -264,8 +267,6 @@ function Install-VCppRedist {
 
     Read-Host 'Press Enter to close this window...'
 }
-
-
 
 
 

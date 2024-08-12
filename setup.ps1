@@ -4,6 +4,12 @@ $global:currentStep = 0
 $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 $installationResults = [System.Collections.Generic.List[PSCustomObject]]::new()
 
+
+function Test-Admin {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
 # Function to add a step
 function Add-Step {
     param (
@@ -173,6 +179,10 @@ foreach ($detail in $scriptDetails) {
 
 # Main script execution with try-catch for error handling
 try {
+
+
+    Test-Admin
+
     $powerShellPath = Get-PowerShellPath
 
     foreach ($detail in $scriptDetails) {

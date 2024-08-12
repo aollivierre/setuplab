@@ -24,7 +24,7 @@ if (-not (Test-Admin)) {
     Write-Log "Restarting script with elevated permissions..."
     $startProcessParams = @{
         FilePath     = "powershell.exe"
-        ArgumentList = @("NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+        ArgumentList = @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
         Verb         = "RunAs"
     }
     Start-Process @startProcessParams

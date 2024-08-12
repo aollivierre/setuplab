@@ -67,16 +67,24 @@ function Get-PowerShellPath {
 
 
 # Function to validate software installation via registry with retry mechanism
+
+
+# Function to validate software installation via registry with retry mechanism
 function Validate-Installation {
     param (
         [string]$SoftwareName,
         [version]$MinVersion = [version]"0.0.0.0",
+        [string]$RegistryPath = "",
         [int]$MaxRetries = 3,
         [int]$DelayBetweenRetries = 5  # Delay in seconds
     )
 
     if ($SoftwareName -eq "RDP") {
         return @{ IsInstalled = $false }  # Force the RDP script to always run
+    }
+
+    if ($SoftwareName -eq "Windows Terminal") {
+        return @{ IsInstalled = $false }  # Force the Windows Terminal script to always run as it will handle its own validation logic
     }
 
     $retryCount = 0
@@ -89,14 +97,14 @@ function Validate-Installation {
             "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"  # Include HKCU for user-installed apps
         )
 
-        foreach ($path in $registryPaths) {
-            $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-
-            foreach ($item in $items) {
-                $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
-                if ($app.DisplayName -like "*$SoftwareName*") {
+        if ($RegistryPath) {
+            # If a specific registry path is provided, check only that path
+            if (Test-Path $RegistryPath) {
+                $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
+                if ($app -and $app.DisplayName -like "*$SoftwareName*") {
                     $installedVersion = [version]$app.DisplayVersion
                     if ($installedVersion -ge $MinVersion) {
+                        $validationSucceeded = $true
                         return @{
                             IsInstalled = $true
                             Version     = $installedVersion
@@ -105,11 +113,30 @@ function Validate-Installation {
                     }
                 }
             }
+        } else {
+            # If no specific registry path, check standard locations
+            foreach ($path in $registryPaths) {
+                $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+                foreach ($item in $items) {
+                    $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
+                    if ($app.DisplayName -like "*$SoftwareName*") {
+                        $installedVersion = [version]$app.DisplayVersion
+                        if ($installedVersion -ge $MinVersion) {
+                            $validationSucceeded = $true
+                            return @{
+                                IsInstalled = $true
+                                Version     = $installedVersion
+                                ProductCode = $app.PSChildName
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         $retryCount++
         if (-not $validationSucceeded) {
-            Write-Log "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "ERROR"
+            Write-Log "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
             Start-Sleep -Seconds $DelayBetweenRetries
         }
     }
@@ -129,10 +156,11 @@ $scriptDetails = @(
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.5.2968" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.3.6.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.17.11461.0" },
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3"},
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.20.240626001" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
 )
+
 
 # Add steps for each script
 foreach ($detail in $scriptDetails) {
@@ -147,10 +175,18 @@ try {
         $url = $detail.Url
         $softwareName = $detail.SoftwareName
         $minVersion = $detail.MinVersion
+        $registryPath = $detail.RegistryPath  # Directly extract RegistryPath
 
         # Validate before running the installation script
         Write-Log "Validating existing installation of $softwareName..."
-        $installationCheck = Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
+
+        # Pass RegistryPath if it's available
+        $installationCheck = if ($registryPath) {
+            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5 -RegistryPath $registryPath
+        } else {
+            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
+        }
+
         if ($installationCheck.IsInstalled) {
             Write-Log "$softwareName version $($installationCheck.Version) is already installed. Skipping installation." -Level "INFO"
             $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Already Installed"; VersionFound = $installationCheck.Version })
@@ -178,7 +214,7 @@ try {
     foreach ($result in $installationResults) {
         if ($result.Status -eq "Installed") {
             Write-Log "Validating installation of $($result.SoftwareName)..."
-            $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion $scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName } | Select-Object -ExpandProperty MinVersion
+            $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion ($scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName }).MinVersion
 
             if ($validationResult.IsInstalled) {
                 Write-Log "Validation successful: $($result.SoftwareName) version $($validationResult.Version) is installed." -Level "INFO"
@@ -217,6 +253,10 @@ catch {
     Write-Log "An error occurred: $errorDetails" -Level "ERROR"
     throw
 }
+
+
+
+
 
 # Keep the PowerShell window open to review the logs
 Read-Host 'Press Enter to close this window...'

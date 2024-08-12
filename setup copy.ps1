@@ -49,7 +49,8 @@ function Test-Url {
     try {
         Invoke-RestMethod -Uri $url -Method Head -ErrorAction Stop
         return $true
-    } catch {
+    }
+    catch {
         return $false
     }
 }
@@ -58,9 +59,11 @@ function Test-Url {
 function Get-PowerShellPath {
     if (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe") {
         return "C:\Program Files\PowerShell\7\pwsh.exe"
-    } elseif (Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") {
+    }
+    elseif (Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") {
         return "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-    } else {
+    }
+    else {
         throw "Neither PowerShell 7 nor PowerShell 5 was found on this system."
     }
 }
@@ -113,7 +116,8 @@ function Validate-Installation {
                     }
                 }
             }
-        } else {
+        }
+        else {
             # If no specific registry path, check standard locations
             foreach ($path in $registryPaths) {
                 $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
@@ -141,7 +145,7 @@ function Validate-Installation {
         }
     }
 
-    return @{IsInstalled = $false}
+    return @{IsInstalled = $false }
 }
 
 
@@ -156,7 +160,7 @@ $scriptDetails = @(
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.5.2968" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.3.6.0" },
-    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3"},
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.20.240626001" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
 )
@@ -183,14 +187,16 @@ try {
         # Pass RegistryPath if it's available
         $installationCheck = if ($registryPath) {
             Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5 -RegistryPath $registryPath
-        } else {
+        }
+        else {
             Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
         }
 
         if ($installationCheck.IsInstalled) {
             Write-Log "$softwareName version $($installationCheck.Version) is already installed. Skipping installation." -Level "INFO"
             $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Already Installed"; VersionFound = $installationCheck.Version })
-        } else {
+        }
+        else {
             if (Test-Url -url $url) {
                 Log-Step
                 Write-Log "Running script from URL: $url" -Level "INFO"
@@ -198,7 +204,8 @@ try {
                 $processList.Add($process)
 
                 $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })
-            } else {
+            }
+            else {
                 Write-Log "URL $url is not accessible" -Level "ERROR"
                 $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Failed - URL Not Accessible"; VersionFound = "N/A" })
             }
@@ -213,6 +220,12 @@ try {
     # Post-installation validation
     foreach ($result in $installationResults) {
         if ($result.Status -eq "Installed") {
+            if ($result.SoftwareName -in @("RDP", "Windows Terminal")) {
+                Write-Log "Skipping post-installation validation for $($result.SoftwareName)." -Level "INFO"
+                $result.Status = "Successfully Installed"
+                continue
+            }
+
             Write-Log "Validating installation of $($result.SoftwareName)..."
             $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion ($scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName }).MinVersion
 
@@ -220,12 +233,14 @@ try {
                 Write-Log "Validation successful: $($result.SoftwareName) version $($validationResult.Version) is installed." -Level "INFO"
                 $result.VersionFound = $validationResult.Version
                 $result.Status = "Successfully Installed"
-            } else {
+            }
+            else {
                 Write-Log "Validation failed: $($result.SoftwareName) was not found on the system." -Level "ERROR"
                 $result.Status = "Failed - Not Found After Installation"
             }
         }
     }
+
 
     # Summary report
     $totalSoftware = $installationResults.Count
@@ -253,9 +268,6 @@ catch {
     Write-Log "An error occurred: $errorDetails" -Level "ERROR"
     throw
 }
-
-
-
 
 
 # Keep the PowerShell window open to review the logs

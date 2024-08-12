@@ -6,7 +6,7 @@ function Test-Admin {
     $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# Function for logging
+# Function for logging with color coding
 function Write-Log {
     param (
         [string]$Message,
@@ -14,10 +14,16 @@ function Write-Log {
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
+    
+    switch ($Level) {
+        "INFO" { Write-Host $logMessage -ForegroundColor Green }
+        "ERROR" { Write-Host $logMessage -ForegroundColor Red }
+        "WARNING" { Write-Host $logMessage -ForegroundColor Yellow }
+        default { Write-Host $logMessage -ForegroundColor White }
+    }
 
     # Append to log file
-    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-vscode.log')
+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-VSCode.log')
     $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
 }
 

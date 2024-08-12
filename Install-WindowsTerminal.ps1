@@ -149,17 +149,12 @@ function Install-WindowsTerminal {
     # Step 1: Pre-installation validation
     Log-Step
 
-    # Resolve the path dynamically using wildcards
-    $exePath = Resolve-Path "C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_*_8wekyb3d8bbwe\WindowsTerminal.exe"
-    if ($exePath.Count -gt 1) {
-        $exePath = $exePath[-1].Path  # Use the latest version if multiple versions are found
-    }
+    # Check for the existing installation at the final installation path
+    $exePath = "C:\Program Files\WindowsTerminal\WindowsTerminal.exe"
 
-    if ($exePath) {
-        $appFolder = Split-Path -Path $exePath -Parent
-        $appVersionString = $appFolder -replace '.+\\Microsoft\.WindowsTerminal_(\d+\.\d+\.\d+\.\d+).*', '$1'
-
-        # Convert the version string to a [version] type
+    # Check if the executable exists at the predefined installation path
+    if (Test-Path $exePath) {
+        $appVersionString = (Get-ItemProperty -Path $exePath).VersionInfo.ProductVersion
         $appVersion = [version]$appVersionString
 
         # Define the minimum required version
@@ -178,6 +173,8 @@ function Install-WindowsTerminal {
     }
 
     $completedSteps++
+
+
 
 
 
@@ -276,6 +273,7 @@ function Install-WindowsTerminal {
     else {
         Write-Log "Post-installation validation failed: Windows Terminal was not found on the system." -Level "ERROR"
     }
+
 
   
 

@@ -14,10 +14,17 @@ function Write-Log {
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
+    
+    switch ($Level) {
+        "INFO" { Write-Host $logMessage -ForegroundColor Green }
+        "ERROR" { Write-Host $logMessage -ForegroundColor Red }
+        "WARNING" { Write-Host $logMessage -ForegroundColor Yellow }
+        "NOTICE" { Write-Host $logMessage -ForegroundColor Blue }
+        default { Write-Host $logMessage -ForegroundColor White }
+    }
 
     # Append to log file
-    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-git.log')
+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'Install-Git.log')
     $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
 }
 
@@ -77,9 +84,48 @@ function Get-LatestGitUrl {
     }
 }
 
+
+function Validate-GitInstallation {
+    param (
+        [version]$MinVersion = [version]"2.46.0"
+    )
+
+    $registryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+
+    foreach ($path in $registryPaths) {
+        $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+        foreach ($item in $items) {
+            $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
+            if ($app.DisplayName -like "*Git*") {
+                $installedVersion = [version]$app.DisplayVersion
+                if ($installedVersion -ge $MinVersion) {
+                    return @{
+                        IsInstalled = $true
+                        Version     = $installedVersion
+                        ProductCode = $app.PSChildName
+                    }
+                }
+            }
+        }
+    }
+
+    return @{ IsInstalled = $false }
+}
+
 function Install-Git {
     $downloadUrl = Get-LatestGitUrl
     $installerPath = [System.IO.Path]::Combine($env:TEMP, 'Git-Installer.exe')
+    $minGitVersion = [version]"2.46.0"
+
+    # Pre-validation: Check if Git is already installed and meets the minimum version
+    $preValidationResult = Validate-GitInstallation -MinVersion $minGitVersion
+    if ($preValidationResult.IsInstalled) {
+        Write-Log "Git is already installed and meets the minimum version. Version: $($preValidationResult.Version)" -Level "INFO"
+        return
+    }
 
     try {
         Write-Log 'Downloading Git...'
@@ -109,6 +155,15 @@ function Install-Git {
     } catch {
         Write-Log "Error installing Git: $_" -Level "ERROR"
         Read-Host 'Press Enter to close this window...'
+        exit 1
+    }
+
+    # Post-validation: Verify the installation by calling Validate-GitInstallation again
+    $postValidationResult = Validate-GitInstallation -MinVersion $minGitVersion
+    if ($postValidationResult.IsInstalled) {
+        Write-Log "Git installed successfully. Version: $($postValidationResult.Version)" -Level "INFO"
+    } else {
+        Write-Log "Git installation failed or does not meet the minimum version requirement." -Level "ERROR"
         exit 1
     }
 

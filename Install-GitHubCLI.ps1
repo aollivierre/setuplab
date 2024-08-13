@@ -108,8 +108,9 @@ function Get-PowerShellPath {
 }
 
 
-function Validate-GitHubCLIInstallation {
+function Validate-ApplicationInstallation {
     param (
+        [string]$AppDisplayName,
         [version]$MinVersion = [version]"2.54.0",
         [int]$MaxRetries = 3,
         [int]$DelayBetweenRetries = 5  # Delay in seconds
@@ -130,7 +131,7 @@ function Validate-GitHubCLIInstallation {
                 $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
                 foreach ($item in $items) {
                     $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
-                    if ($app.DisplayName -like "*GitHub CLI*") {
+                    if ($app.DisplayName -like "*$AppDisplayName*") {
                         $installedVersion = [version]$app.DisplayVersion
                         if ($installedVersion -ge $MinVersion) {
                             $validationSucceeded = $true
@@ -144,12 +145,12 @@ function Validate-GitHubCLIInstallation {
                 }
             }
         } catch {
-            Write-Log "Error validating GitHub CLI installation: $_" -Level "ERROR"
+            Write-Log "Error validating $AppDisplayName installation: $_" -Level "ERROR"
         }
 
         $retryCount++
         if (-not $validationSucceeded) {
-            Write-Log "Validation attempt $retryCount failed: GitHub CLI not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+            Write-Log "Validation attempt $retryCount failed: $AppDisplayName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
             Start-Sleep -Seconds $DelayBetweenRetries
         }
     }
@@ -270,7 +271,7 @@ function Install-GitHubCLI {
         try {
             # Pre-validation: Check if GitHub CLI is already installed and meets the minimum version
             $minVersion = [version]"2.54.0"
-            $preValidationResult = Validate-GitHubCLIInstallation -MinVersion $minVersion
+            $preValidationResult = Validate-ApplicationInstallation -AppDisplayName "GitHub CLI" -MinVersion $minVersion
             if ($preValidationResult.IsInstalled) {
                 Write-Log -Message "GitHub CLI is already installed and meets the minimum version. Version: $($preValidationResult.Version)" -Level "INFO"
                 return
@@ -294,7 +295,7 @@ function Install-GitHubCLI {
 
             # Post-validation: Verify the installation by calling Validate-GitHubCLIInstallation
             Write-Log -Message "Verifying the GitHub CLI installation..." -Level "INFO"
-            $postValidationResult = Validate-GitHubCLIInstallation -MinVersion $minVersion
+            $postValidationResult = Validate-ApplicationInstallation -AppDisplayName "GitHub CLI" -MinVersion $minVersion
             if ($postValidationResult.IsInstalled) {
                 Write-Log -Message "GitHub CLI installed successfully. Version: $($postValidationResult.Version)" -Level "INFO"
             } else {

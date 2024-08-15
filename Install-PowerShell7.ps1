@@ -194,7 +194,7 @@ function Validate-SoftwareInstallation {
                     }
                 }
                 else {
-                    Write-Log -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
+                    Write-Log -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "WARNING"
                 }
             }
 

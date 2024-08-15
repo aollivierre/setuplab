@@ -180,8 +180,18 @@ foreach ($detail in $scriptDetails) {
 # Main script execution with try-catch for error handling
 try {
 
-
-    Test-Admin
+    # Elevate to administrator if not already
+    if (-not (Test-Admin)) {
+        Write-Log "Restarting script with elevated permissions..."
+        $startProcessParams = @{
+            FilePath     = "powershell.exe"
+            ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
+            Verb         = "RunAs"
+        }
+        Start-Process @startProcessParams
+        exit
+    }
+    
 
     $powerShellPath = Get-PowerShellPath
 

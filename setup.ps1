@@ -220,7 +220,22 @@ try {
             if (Test-Url -url $url) {
                 Log-Step
                 Write-Log "Running script from URL: $url" -Level "INFO"
-                $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
+                # $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
+
+                $startProcessParams = @{
+                    FilePath     = $powerShellPath
+                    ArgumentList = @(
+                        "-NoExit",
+                        "-NoProfile",
+                        "-ExecutionPolicy", "Bypass",
+                        "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')"
+                    )
+                    Verb         = "RunAs"
+                    PassThru     = $true
+                }
+                
+                $process = Start-Process @startProcessParams
+                
                 $processList.Add($process)
 
                 $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })

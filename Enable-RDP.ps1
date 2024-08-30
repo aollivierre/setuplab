@@ -1,5 +1,5 @@
 # Initialize the total and completed steps
-$totalSteps = 6
+$totalSteps = 5
 $completedSteps = 0
 
 # Function to check if running as administrator
@@ -14,15 +14,29 @@ function Write-Log {
         [string]$Message,
         [string]$Level = "INFO"
     )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
+
+    # Get the PowerShell call stack to determine the actual calling function
+    $callStack = Get-PSCallStack
+    $callerFunction = if ($callStack.Count -ge 2) { $callStack[1].Command } else { '<Unknown>' }
+
+    # Prepare the formatted message with the actual calling function information
+    $formattedMessage = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] [$callerFunction] $Message"
+
+    # Display the log message based on the log level using Write-Host
+    switch ($Level.ToUpper()) {
+        "DEBUG" { Write-Host $formattedMessage -ForegroundColor DarkGray }
+        "INFO" { Write-Host $formattedMessage -ForegroundColor Green }
+        "NOTICE" { Write-Host $formattedMessage -ForegroundColor Cyan }
+        "WARNING" { Write-Host $formattedMessage -ForegroundColor Yellow }
+        "ERROR" { Write-Host $formattedMessage -ForegroundColor Red }
+        "CRITICAL" { Write-Host $formattedMessage -ForegroundColor Magenta }
+        default { Write-Host $formattedMessage -ForegroundColor White }
+    }
 
     # Append to log file
-    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'enable-rdp.log')
-    $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'Enable-RDP.log')
+    $formattedMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
 }
-
 # Function to validate RDP and "Everyone" group membership
 function Validate-RDPConfiguration {
     $rdpEnabled = (Get-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections").fDenyTSConnections -eq 0

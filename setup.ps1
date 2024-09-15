@@ -178,6 +178,7 @@ $scriptDetails = @(
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.20.240626001" },
     @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-DockerDesktop.ps1"; SoftwareName = "Docker Desktop"; MinVersion = [version]"4.34.2" } 
 )
 
 

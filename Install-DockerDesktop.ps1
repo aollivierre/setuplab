@@ -1,7 +1,79 @@
+function Log-Params {
+    <#
+    .SYNOPSIS
+    Logs the provided parameters and their values with the parent function name appended.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Params
+    )
+
+    Begin {
+        # Get the name of the parent function
+        $parentFunctionName = (Get-PSCallStack)[1].Command
+
+        # Write-Log -Message "Starting Log-Params function in $parentFunctionName" -Level "INFO"
+    }
+
+    Process {
+        try {
+            foreach ($key in $Params.Keys) {
+                # Append the parent function name to the key
+                $enhancedKey = "$parentFunctionName.$key"
+                Write-Log -Message "$enhancedKey $($Params[$key])" -Level "INFO"
+            }
+        }
+        catch {
+            Write-Log -Message "An error occurred while logging parameters in $parentFunctionName $($_.Exception.Message)" -Level "ERROR"
+            # Handle-Error -ErrorRecord $_
+            throw
+        }
+    }
+
+    End {
+        # Write-Log -Message "Exiting Log-Params function in $parentFunctionName" -Level "INFO"
+    }
+}
+
 # Function to check if running as administrator
 function Test-Admin {
     $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+
+function Get-ParentScriptName {
+    [CmdletBinding()]
+    param ()
+
+    try {
+        # Get the current call stack
+        $callStack = Get-PSCallStack
+
+        # If there is a call stack, return the top-most script name
+        if ($callStack.Count -gt 0) {
+            foreach ($frame in $callStack) {
+                if ($frame.ScriptName) {
+                    $parentScriptName = $frame.ScriptName
+                    # Write-Log -Message "Found script in call stack: $parentScriptName" -Level "INFO"
+                }
+            }
+
+            if (-not [string]::IsNullOrEmpty($parentScriptName)) {
+                $parentScriptName = [System.IO.Path]::GetFileNameWithoutExtension($parentScriptName)
+                return $parentScriptName
+            }
+        }
+
+        # If no script name was found, return 'UnknownScript'
+        # Write-Log -Message "No script name found in the call stack." -Level "WARNING"
+        return "UnknownScript"
+    }
+    catch {
+        # Write-Log -Message "An error occurred while retrieving the parent script name: $_" -Level "ERROR"
+        return "UnknownScript"
+    }
 }
 
 # Function for logging with color coding
@@ -10,19 +82,31 @@ function Write-Log {
         [string]$Message,
         [string]$Level = "INFO"
     )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
-    
-    switch ($Level) {
-        "INFO" { Write-Host $logMessage -ForegroundColor Green }
-        "ERROR" { Write-Host $logMessage -ForegroundColor Red }
-        "WARNING" { Write-Host $logMessage -ForegroundColor Yellow }
-        default { Write-Host $logMessage -ForegroundColor White }
+
+    # Get the PowerShell call stack to determine the actual calling function
+    $callStack = Get-PSCallStack
+    $callerFunction = if ($callStack.Count -ge 2) { $callStack[1].Command } else { '<Unknown>' }
+
+    # Get the parent script name
+    $parentScriptName = Get-ParentScriptName
+
+    # Prepare the formatted message with the actual calling function information
+    $formattedMessage = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] [$parentScriptName.$callerFunction] $Message"
+
+    # Display the log message based on the log level using Write-Host
+    switch ($Level.ToUpper()) {
+        "DEBUG" { Write-Host $formattedMessage -ForegroundColor DarkGray }
+        "INFO" { Write-Host $formattedMessage -ForegroundColor Green }
+        "NOTICE" { Write-Host $formattedMessage -ForegroundColor Cyan }
+        "WARNING" { Write-Host $formattedMessage -ForegroundColor Yellow }
+        "ERROR" { Write-Host $formattedMessage -ForegroundColor Red }
+        "CRITICAL" { Write-Host $formattedMessage -ForegroundColor Magenta }
+        default { Write-Host $formattedMessage -ForegroundColor White }
     }
 
     # Append to log file
-    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-DockerDesktop.log')
-    $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'Install-DockerDesktop.log')
+    $formattedMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
 }
 
 # Elevate to administrator if not already
@@ -85,12 +169,13 @@ function Sanitize-VersionString {
         return $version
     }
     catch {
-        Write-EnhancedLog -Message "Failed to convert version string: $versionString. Error: $_" -Level "ERROR"
+       Write-Log -Message "Failed to convert version string: $versionString. Error: $_" -Level "ERROR"
         return $null
     }
 }
 
 # Function to validate the installation of Docker Desktop with splat parameters
+
 function Validate-SoftwareInstallation {
     [CmdletBinding()]
     param (
@@ -103,13 +188,15 @@ function Validate-SoftwareInstallation {
     )
 
     Begin {
-        Write-Log -Message "Starting Validate-SoftwareInstallation function" -Level "NOTICE"
+       Write-Log -Message "Starting Validate-SoftwareInstallation function for $SoftwareName" -Level "NOTICE"
+        # Optionally log parameters here
         # Log-Params -Params $PSCmdlet.MyInvocation.BoundParameters
     }
 
     Process {
         $retryCount = 0
         $validationSucceeded = $false
+        $foundVersion = $null
 
         while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
             # Registry-based validation
@@ -125,6 +212,7 @@ function Validate-SoftwareInstallation {
                         $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
                         if ($app -and $app.DisplayName -like "*$SoftwareName*") {
                             $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                            $foundVersion = $installedVersion
                             if ($installedVersion -ge $MinVersion) {
                                 $validationSucceeded = $true
                                 return @{
@@ -135,14 +223,14 @@ function Validate-SoftwareInstallation {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     foreach ($path in $registryPaths) {
                         $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
                         foreach ($item in $items) {
                             $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
                             if ($app.DisplayName -like "*$SoftwareName*") {
                                 $installedVersion = Sanitize-VersionString -versionString $app.DisplayVersion
+                                $foundVersion = $installedVersion
                                 if ($installedVersion -ge $MinVersion) {
                                     $validationSucceeded = $true
                                     return @{
@@ -162,65 +250,42 @@ function Validate-SoftwareInstallation {
                 if (Test-Path $ExePath) {
                     $appVersionString = (Get-ItemProperty -Path $ExePath).VersionInfo.ProductVersion.Split(" ")[0]  # Extract only the version number
                     $appVersion = Sanitize-VersionString -versionString $appVersionString
+                    $foundVersion = $appVersion
 
                     if ($appVersion -ge $MinVersion) {
-                        Write-Log -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
+                       Write-Log -Message "Validation successful: $SoftwareName version $appVersion is installed at $ExePath." -Level "INFO"
                         return @{
                             IsInstalled = $true
                             Version     = $appVersion
                             Path        = $ExePath
                         }
+                    } else {
+                       Write-Log -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
                     }
-                    else {
-                        Write-Log -Message "Validation failed: $SoftwareName version $appVersion does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
-                    }
-                }
-                else {
-                    Write-Log -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
+                } else {
+                   Write-Log -Message "Validation failed: $SoftwareName executable was not found at $ExePath." -Level "ERROR"
                 }
             }
 
+            if ($foundVersion) {
+               Write-Log -Message "Software $SoftwareName was found with version $foundVersion, but it does not meet the minimum version requirement ($MinVersion)." -Level "ERROR"
+            } else {
+               Write-Log -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
+            }
+
             $retryCount++
-            Write-Log -Message "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet the minimum requirement ($MinVersion). Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
             Start-Sleep -Seconds $DelayBetweenRetries
         }
 
-        return @{ IsInstalled = $false }
+        return @{ IsInstalled = $false; Version = $foundVersion }
     }
 
     End {
-        Write-Log -Message "Exiting Validate-SoftwareInstallation function" -Level "NOTICE"
+       Write-Log -Message "Exiting Validate-SoftwareInstallation function for $SoftwareName" -Level "NOTICE"
     }
 }
 
-
-
-
-# # Parameters for validating OneDrive installation
-# $oneDriveValidationParams = @{
-#     SoftwareName         = "OneDrive"
-#     MinVersion           = [version]"24.146.0721.0003"  # Example minimum version
-#     RegistryPath         = "HKLM:\SOFTWARE\Microsoft\OneDrive"  # Example registry path for OneDrive metadata
-#     ExePath              = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"  # Path to the OneDrive executable
-#     MaxRetries           = 3
-#     DelayBetweenRetries  = 5
-# }
-
-# # Perform the validation
-# $oneDriveValidationResult = Validate-SoftwareInstallation @oneDriveValidationParams
-
-# # Check the results of the validation
-# if ($oneDriveValidationResult.IsInstalled) {
-#     Write-Host "OneDrive version $($oneDriveValidationResult.Version) is installed and validated." -ForegroundColor Green
-#     Write-Host "Executable Path: $($oneDriveValidationResult.Path)"
-# } else {
-#     Write-Host "OneDrive is not installed or does not meet the minimum version requirement." -ForegroundColor Red
-# }
-
-
-
-
-# Function to install Docker Desktop using Windows Containers
+# install Docker Desktop using Windows Containers
 function Install-DockerDesktop {
     $totalSteps = 6
     $completedSteps = 0
@@ -232,12 +297,15 @@ function Install-DockerDesktop {
     
     $preValidationParams = @{
         SoftwareName        = "Docker Desktop"
-        MinVersion          = [version]"4.34.2"  # Adjust the required minimum version
-        RegistryPath        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Docker Desktop"
+        MinVersion          = [version]"4.33.1"  # Adjust the required minimum version
+        RegistryPath        = "HKLM:\SOFTWARE\Docker Inc.\Docker Desktop"
+        ExePath             = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
         MaxRetries          = 3
         DelayBetweenRetries = 5  # Delay in seconds
     }
     $preInstallCheck = Validate-SoftwareInstallation @preValidationParams
+
+    # wait-debugger
     
     if ($preInstallCheck.IsInstalled) {
         Write-Log "Docker Desktop version $($preInstallCheck.Version) is already installed. Skipping installation." -Level "INFO"
@@ -281,8 +349,9 @@ function Install-DockerDesktop {
     
     $postValidationParams = @{
         SoftwareName        = "Docker Desktop"
-        MinVersion          = [version]"4.34.2"
+        MinVersion          = [version]"4.33.1"
         RegistryPath        = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Docker Desktop"
+        ExePath             = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
         MaxRetries          = 3
         DelayBetweenRetries = 5
     }
@@ -291,7 +360,8 @@ function Install-DockerDesktop {
     if ($postInstallCheck.IsInstalled) {
         Write-Log "Validation successful: Docker Desktop version $($postInstallCheck.Version) is installed."
         $completedSteps++
-    } else {
+    }
+    else {
         Write-Log "Validation failed after $($postValidationParams['MaxRetries']) attempts: Docker Desktop was not found on the system." -Level "ERROR"
     }
 

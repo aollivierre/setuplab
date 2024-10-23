@@ -330,6 +330,11 @@ function Install-DockerDesktop {
 
     Write-Log "Installer path: $installerPath"
 
+
+    #Before installing Docker Desktop install WSL to avoid issues with Docker Desktop Starting then switch it from Linux to Windows Containers
+
+    & "C:\Windows\System32\wsl.exe" --install
+
     # Step 3: Installing Docker Desktop using command line with Windows Containers
     Write-Log "Step 3: Installing Docker Desktop with Windows Containers..."
     try {
@@ -359,6 +364,13 @@ function Install-DockerDesktop {
     $postInstallCheck = Validate-SoftwareInstallation @postValidationParams
     if ($postInstallCheck.IsInstalled) {
         Write-Log "Validation successful: Docker Desktop version $($postInstallCheck.Version) is installed."
+
+
+
+        #now switch to Windows Containers
+        & "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchDaemon
+
+
         $completedSteps++
     }
     else {

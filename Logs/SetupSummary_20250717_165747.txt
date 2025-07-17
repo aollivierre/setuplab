@@ -1,0 +1,18 @@
+﻿SetupLab Installation Summary
+Generated: 07/17/2025 16:57:47
+===============================
+
+Completed Installations (0):
+
+
+Failed Installations (0):
+
+
+Skipped Installations (1):
+  - Git
+
+
+Configuration:
+  Max Concurrency: 4
+  Skip Validation: True
+  Config File: software-config.json

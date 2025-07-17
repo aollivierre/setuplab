@@ -83,3 +83,79 @@
 [2025-07-17 16:33:37] [Info] Filtering by software: Claude Code
 [2025-07-17 16:33:37] [Warning] Administrator privileges required. Requesting elevation...
 [2025-07-17 16:33:37] [Warning] Requesting administrator elevation...
+[2025-07-17 16:55:18] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-17 16:55:18] [Info] ============================================================
+[2025-07-17 16:55:19] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:55:19] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:55:19] [Info] Filtering by software: Claude Code
+[2025-07-17 16:55:19] [Warning] Administrator privileges required. Requesting elevation...
+[2025-07-17 16:55:19] [Warning] Requesting administrator elevation...
+[2025-07-17 16:56:50] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-17 16:56:50] [Info] ============================================================
+[2025-07-17 16:56:50] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:56:50] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:56:50] [Info] Filtering by software: Claude Code
+[2025-07-17 16:56:50] [Success] Running with administrator privileges
+
+[2025-07-17 16:56:50] [Info] Installation Summary:
+[2025-07-17 16:56:50] [Info]   Total packages: 
+[2025-07-17 16:56:50] [Info]   Skip validation: True
+[2025-07-17 16:56:50] [Info]   Max concurrency: 4
+
+[2025-07-17 16:56:50] [Info] Software to install:
+[2025-07-17 16:56:50] [Info]   [Development] Claude Code
+
+
+[2025-07-17 16:56:52] [Info] Checking Windows features...
+
+[2025-07-17 16:56:52] [Info] Starting parallel installation process...
+[2025-07-17 16:56:52] [Info] Starting parallel installation of 1 packages (max concurrency: 4)
+[2025-07-17 16:56:52] [Info] Starting installation job for: Claude Code
+[2025-07-17 16:56:52] [Info] Claude Code not found on system
+[2025-07-17 16:56:54] [Info] Installing NPM package: @anthropic-ai/claude-code
+[2025-07-17 16:56:54] [Debug] Using npm version: 10.9.2
+[2025-07-17 16:56:54] [Debug] Running: npm install -g @anthropic-ai/claude-code --ignore-scripts
+[2025-07-17 16:56:54] [Debug] Running: npm install -g @anthropic-ai/claude-code --ignore-scripts
+[2025-07-17 16:57:42] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-17 16:57:42] [Info] ============================================================
+[2025-07-17 16:57:42] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:57:42] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:57:42] [Info] Filtering by software: Git
+[2025-07-17 16:57:42] [Warning] Administrator privileges required. Requesting elevation...
+[2025-07-17 16:57:42] [Warning] Requesting administrator elevation...
+[2025-07-17 16:57:45] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-17 16:57:45] [Info] ============================================================
+[2025-07-17 16:57:45] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:57:45] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:57:45] [Info] Filtering by software: Git
+[2025-07-17 16:57:45] [Success] Running with administrator privileges
+
+[2025-07-17 16:57:45] [Info] Installation Summary:
+[2025-07-17 16:57:45] [Info]   Total packages: 
+[2025-07-17 16:57:45] [Info]   Skip validation: True
+[2025-07-17 16:57:45] [Info]   Max concurrency: 4
+
+[2025-07-17 16:57:45] [Info] Software to install:
+[2025-07-17 16:57:45] [Info]   [Development] Git
+
+
+[2025-07-17 16:57:47] [Info] Checking Windows features...
+
+[2025-07-17 16:57:47] [Info] Starting parallel installation process...
+[2025-07-17 16:57:47] [Info] Starting parallel installation of 1 packages (max concurrency: 4)
+[2025-07-17 16:57:47] [Info] Starting installation job for: Git
+[2025-07-17 16:57:47] [Success] Git version 2.50.1 found (meets minimum 2.40.0)
+[2025-07-17 16:57:47] [Info] Git is already installed - skipping job creation
+[2025-07-17 16:57:47] [Info] ============================================================
+[2025-07-17 16:57:47] [Info] Installation Summary:
+[2025-07-17 16:57:47] [Success]   Completed: 0
+[2025-07-17 16:57:47] [Info]   Failed: 0
+[2025-07-17 16:57:47] [Info]   Skipped: 1
+[2025-07-17 16:57:47] [Info] ============================================================
+
+[2025-07-17 16:57:47] [Info] ============================================================
+[2025-07-17 16:57:47] [Info] Setup Complete!
+[2025-07-17 16:57:47] [Info] ============================================================
+[2025-07-17 16:57:47] [Info] Summary report saved to: C:\code\setuplab\Logs\SetupSummary_20250717_165747.txt
+
+[2025-07-17 16:57:47] [Success] Setup completed. Check the summary report for details.

@@ -491,7 +491,11 @@ function Invoke-SetupInstaller {
         
         Write-SetupLog "Running: npm $($npmArgs -join ' ')" -Level Debug
         
-        $process = Start-Process -FilePath "npm" -ArgumentList $npmArgs -Wait -PassThru -NoNewWindow
+        # Use cmd.exe to run npm to avoid path and binary compatibility issues
+        $npmCommand = "npm $($npmArgs -join ' ')"
+        Write-SetupLog "Running: $npmCommand" -Level Debug
+        
+        $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $npmCommand -Wait -PassThru -NoNewWindow
         
         if ($process.ExitCode -ne 0) {
             throw "NPM installation failed with exit code: $($process.ExitCode)"

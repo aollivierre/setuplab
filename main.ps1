@@ -272,7 +272,11 @@ Write-SetupLog "Setup Complete!" -Level Info
 Write-SetupLog (("=" * 60)) -Level Info
 
 # Create summary report
-$summaryPath = Join-Path $PSScriptRoot "Logs" "SetupSummary_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"
+$logsDir = Join-Path $PSScriptRoot "Logs"
+if (-not (Test-Path $logsDir)) {
+    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+}
+$summaryPath = Join-Path $logsDir "SetupSummary_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"
 $summary = @"
 SetupLab Installation Summary
 Generated: $(Get-Date)
@@ -295,10 +299,10 @@ Configuration:
 
 try {
     $summary | Out-File -FilePath $summaryPath -Encoding UTF8
+    Write-SetupLog "Summary report saved to: $summaryPath" -Level Info
 } catch {
     Write-SetupLog "Could not save summary report: $_" -Level Warning
 }
-Write-SetupLog "Summary report saved to: $summaryPath" -Level Info
 #endregion
 
 #region Post-Installation Notes

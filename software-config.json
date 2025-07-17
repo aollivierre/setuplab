@@ -51,7 +51,7 @@
     {
       "name": "GitHub Desktop",
       "enabled": true,
-      "registryName": "GitHub Desktop",
+      "registryName": "GitHubDesktop",
       "executablePath": "C:\\Users\\%USERNAME%\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe",
       "downloadUrl": "https://central.github.com/deployments/desktop/desktop/latest/win32",
       "installerExtension": ".exe",
@@ -137,10 +137,10 @@
       "enabled": true,
       "registryName": "FileLocator Pro*",
       "executablePath": "C:\\Program Files\\Mythicsoft\\FileLocator Pro\\FileLocatorPro.exe",
-      "downloadUrl": "https://download.mythicsoft.com/flp/FileLocatorPro_3522_x64.msi",
-      "installerExtension": ".msi",
-      "installType": "MSI",
-      "installArguments": ["/quiet", "/norestart"],
+      "downloadUrl": "https://download.mythicsoft.com/flp/3522/filelocator_3522.exe",
+      "installerExtension": ".exe",
+      "installType": "EXE",
+      "installArguments": ["/S"],
       "minimumVersion": null,
       "category": "Utilities"
     },
@@ -200,10 +200,10 @@
       "enabled": true,
       "registryName": "Warp",
       "executablePath": "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Warp\\Warp.exe",
-      "downloadUrl": "https://app.warp.dev/download/win",
-      "installerExtension": ".msi",
-      "installType": "MSI",
-      "installArguments": ["/quiet", "/norestart"],
+      "downloadUrl": "https://releases.warp.dev/stable/v0.2025.07.09.08.11.stable_01/WarpSetup.exe",
+      "installerExtension": ".exe",
+      "installType": "EXE",
+      "installArguments": ["/S"],
       "minimumVersion": null,
       "category": "Utilities"
     }

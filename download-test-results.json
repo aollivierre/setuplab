@@ -1,0 +1,146 @@
+[
+    {
+        "Name":  "7-Zip",
+        "Category":  "Utilities",
+        "URL":  "https://www.7-zip.org/a/7z2500-x64.msi",
+        "Status":  "Success",
+        "FileSize":  1.9,
+        "Error":  "",
+        "Filename":  "7z2500-x64.msi"
+    },
+    {
+        "Name":  "Git",
+        "Category":  "Development",
+        "URL":  "https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/Git-2.50.1-64-bit.exe",
+        "Status":  "Success",
+        "FileSize":  67.7,
+        "Error":  "",
+        "Filename":  "Git-2.50.1-64-bit.exe"
+    },
+    {
+        "Name":  "Visual Studio Code",
+        "Category":  "Development",
+        "URL":  "https://code.visualstudio.com/sha/download?build=stable\u0026os=win32-x64",
+        "Status":  "Success",
+        "FileSize":  106.31,
+        "Error":  "",
+        "Filename":  "VisualStudioCode_installer.exe"
+    },
+    {
+        "Name":  "Node.js",
+        "Category":  "Development",
+        "URL":  "https://nodejs.org/dist/v22.17.1/node-v22.17.1-x64.msi",
+        "Status":  "Success",
+        "FileSize":  30,
+        "Error":  "",
+        "Filename":  "node-v22.17.1-x64.msi"
+    },
+    {
+        "Name":  "GitHub Desktop",
+        "Category":  "Development",
+        "URL":  "https://central.github.com/deployments/desktop/desktop/latest/win32",
+        "Status":  "Success",
+        "FileSize":  169.01,
+        "Error":  "",
+        "Filename":  "win32"
+    },
+    {
+        "Name":  "GitHub CLI",
+        "Category":  "Development",
+        "URL":  "https://github.com/cli/cli/releases/download/v2.75.1/gh_2.75.1_windows_amd64.msi",
+        "Status":  "Success",
+        "FileSize":  13.64,
+        "Error":  "",
+        "Filename":  "gh_2.75.1_windows_amd64.msi"
+    },
+    {
+        "Name":  "PowerShell 7",
+        "Category":  "Development",
+        "URL":  "https://github.com/PowerShell/PowerShell/releases/download/v7.5.2/PowerShell-7.5.2-win-x64.msi",
+        "Status":  "Success",
+        "FileSize":  107.85,
+        "Error":  "",
+        "Filename":  "PowerShell-7.5.2-win-x64.msi"
+    },
+    {
+        "Name":  "Windows Terminal",
+        "Category":  "Utilities",
+        "URL":  "https://github.com/microsoft/terminal/releases/download/v1.21.10351.0/Microsoft.WindowsTerminal_1.21.10351.0_8wekyb3d8bbwe.msixbundle",
+        "Status":  "Success",
+        "FileSize":  20.85,
+        "Error":  "",
+        "Filename":  "Microsoft.WindowsTerminal_1.21.10351.0_8wekyb3d8bbwe.msixbundle"
+    },
+    {
+        "Name":  "ShareX",
+        "Category":  "Utilities",
+        "URL":  "https://github.com/ShareX/ShareX/releases/download/v17.1.0/ShareX-17.1.0-setup.exe",
+        "Status":  "Success",
+        "FileSize":  51.6,
+        "Error":  "",
+        "Filename":  "ShareX-17.1.0-setup.exe"
+    },
+    {
+        "Name":  "Everything",
+        "Category":  "Utilities",
+        "URL":  "https://www.voidtools.com/Everything-1.4.1.1028.x64-Setup.exe",
+        "Status":  "Success",
+        "FileSize":  1.87,
+        "Error":  "",
+        "Filename":  "Everything-1.4.1.1028.x64-Setup.exe"
+    },
+    {
+        "Name":  "FileLocator Pro",
+        "Category":  "Utilities",
+        "URL":  "https://download.mythicsoft.com/flp/FileLocatorPro_3522_x64.msi",
+        "Status":  "Failed",
+        "FileSize":  0,
+        "Error":  "The remote server returned an error: (403) Forbidden.",
+        "Filename":  "FileLocatorPro_3522_x64.msi"
+    },
+    {
+        "Name":  "Visual C++ Redistributables",
+        "Category":  "Runtime",
+        "URL":  "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+        "Status":  "Success",
+        "FileSize":  24.45,
+        "Error":  "",
+        "Filename":  "vc_redist.x64.exe"
+    },
+    {
+        "Name":  "Claude Code",
+        "Category":  "Development",
+        "URL":  null,
+        "Status":  "Failed",
+        "FileSize":  0,
+        "Error":  "Cannot validate argument on parameter \u0027Uri\u0027. The argument is null or empty. Provide an argument that is not null or empty, and then try the command again.",
+        "Filename":  "ClaudeCode_installer.exe"
+    },
+    {
+        "Name":  "Google Chrome",
+        "Category":  "Browsers",
+        "URL":  "https://dl.google.com/chrome/install/latest/chrome_installer.exe",
+        "Status":  "Success",
+        "FileSize":  10.52,
+        "Error":  "",
+        "Filename":  "chrome_installer.exe"
+    },
+    {
+        "Name":  "Mozilla Firefox",
+        "Category":  "Browsers",
+        "URL":  "https://download.mozilla.org/?product=firefox-latest\u0026os=win64\u0026lang=en-US",
+        "Status":  "Success",
+        "FileSize":  69.53,
+        "Error":  "",
+        "Filename":  "MozillaFirefox_installer.exe"
+    },
+    {
+        "Name":  "Warp Terminal",
+        "Category":  "Utilities",
+        "URL":  "https://app.warp.dev/download/win",
+        "Status":  "Success",
+        "FileSize":  0,
+        "Error":  "",
+        "Filename":  "win"
+    }
+]

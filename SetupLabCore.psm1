@@ -43,8 +43,32 @@ function Write-SetupLog {
     $logMessage = if ($Message) { "[$timestamp] [$Level] $Message" } else { "" }
     $logFilePath = Join-Path $script:LogPath $LogFile
     
-    # Write to log file
-    Add-Content -Path $logFilePath -Value $logMessage -Force
+    # Write to log file with retry logic for concurrent access
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Add-Content -Path $logFilePath -Value $logMessage -Force
+            break
+        }
+        catch {
+            $retryCount++
+            if ($retryCount -eq $maxRetries) {
+                # If all retries fail, try alternative logging method
+                try {
+                    Out-File -FilePath $logFilePath -InputObject $logMessage -Append -Force
+                }
+                catch {
+                    # Final fallback - just output to console
+                    Write-Host "[LOG ERROR] $logMessage" -ForegroundColor Red
+                }
+            }
+            else {
+                Start-Sleep -Milliseconds (100 * $retryCount)
+            }
+        }
+    }
     
     # Write to console with color
     $color = switch ($Level) {
@@ -576,6 +600,29 @@ function Start-ParallelInstallation {
             }
             
             Write-SetupLog "Starting installation job for: $($installation.Name)" -Level Info
+            
+            # Double-check if software is already installed before creating job
+            $revalidationParams = @{
+                Name = $installation.Name
+            }
+            
+            if ($installation.RegistryName) {
+                $revalidationParams['RegistryName'] = $installation.RegistryName
+            }
+            
+            if ($installation.ExecutablePath) {
+                $revalidationParams['ExecutablePath'] = $installation.ExecutablePath
+            }
+            
+            if ($installation.MinimumVersion) {
+                $revalidationParams['MinimumVersion'] = $installation.MinimumVersion
+            }
+            
+            if (Test-SoftwareInstalled @revalidationParams) {
+                Write-SetupLog "$($installation.Name) is already installed - skipping job creation" -Level Info
+                $skipped += $installation
+                continue
+            }
             
             $job = Start-Job -ScriptBlock {
                 param($ModulePath, $Installation)

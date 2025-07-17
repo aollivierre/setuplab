@@ -844,14 +844,14 @@ function Start-ParallelInstallation {
         # Check for completed jobs and timeouts
         $completedJobs = $running.Values | Where-Object { $_.Job.State -ne 'Running' }
         
-        # Check for jobs that have been running too long (more than 5 minutes)
+        # Check for jobs that have been running too long (more than 2 minutes)
         $longRunningJobs = $running.Values | Where-Object { 
             $_.Job.State -eq 'Running' -and 
-            ((Get-Date) - $_.StartTime).TotalMinutes -gt 5 
+            ((Get-Date) - $_.StartTime).TotalMinutes -gt 2 
         }
         
         foreach ($longRunningJob in $longRunningJobs) {
-            Write-SetupLog "$($longRunningJob.Installation.Name) - Installation timed out after 5 minutes, stopping job" -Level Warning
+            Write-SetupLog "$($longRunningJob.Installation.Name) - Installation timed out after 2 minutes, stopping job" -Level Warning
             Stop-Job -Job $longRunningJob.Job -ErrorAction SilentlyContinue
             $longRunningJob.Job.State = 'Stopped'
             $completedJobs += $longRunningJob

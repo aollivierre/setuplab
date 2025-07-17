@@ -98,11 +98,22 @@ function Download-File {
     try {
         Write-WebLog "Downloading: $Url" -Level Info
         
+        # Add cache-busting parameter
+        $timestamp = (Get-Date).ToString("yyyyMMddHHmmss")
+        $separator = if ($Url.Contains("?")) { "&" } else { "?" }
+        $cacheBustUrl = "$Url$separator" + "nocache=$timestamp"
+        
         # Ensure TLS 1.2 is enabled
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         
+        # Download with no-cache headers
+        $headers = @{
+            'Cache-Control' = 'no-cache'
+            'Pragma' = 'no-cache'
+        }
+        
         # Download the file
-        Invoke-WebRequest -Uri $Url -OutFile $OutputPath -UseBasicParsing -ErrorAction Stop
+        Invoke-WebRequest -Uri $cacheBustUrl -OutFile $OutputPath -UseBasicParsing -Headers $headers -ErrorAction Stop
         
         if (Test-Path $OutputPath) {
             Write-WebLog "Successfully downloaded to: $OutputPath" -Level Success

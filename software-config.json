@@ -158,7 +158,7 @@
     },
     {
       "name": "Claude Code",
-      "enabled": false,
+      "enabled": true,
       "registryName": null,
       "executablePath": null,
       "downloadUrl": null,

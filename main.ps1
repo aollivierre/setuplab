@@ -66,7 +66,7 @@ if (-not (Test-Path $modulePath)) {
 
 Import-Module $modulePath -Force
 Write-SetupLog "SetupLab - Automated Lab Environment Setup" -Level Info
-Write-SetupLog ("=" * 60) -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
 #endregion
 
 #region Configuration Loading
@@ -114,14 +114,14 @@ if ($PSBoundParameters.ContainsKey('MaxConcurrency') -eq $false -and $config.set
 #region List Software Mode
 if ($ListSoftware) {
     Write-SetupLog "Available Software:" -Level Info
-    Write-SetupLog ("=" * 60) -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
     
     $groupedSoftware = $config.software | Group-Object -Property category | Sort-Object Name
     
     foreach ($group in $groupedSoftware) {
         Write-SetupLog "" -Level Info
         Write-SetupLog "Category: $($group.Name)" -Level Info
-        Write-SetupLog ("-" * 30) -Level Info
+        Write-SetupLog (("-" * 30)) -Level Info
         
         foreach ($sw in ($group.Group | Sort-Object name)) {
             $status = if ($sw.enabled) { "Enabled" } else { "Disabled" }
@@ -267,9 +267,9 @@ if ($installationResult.Completed.Count -gt 0) {
 
 #region Final Summary
 Write-SetupLog "" -Level Info
-Write-SetupLog ("=" * 60) -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
 Write-SetupLog "Setup Complete!" -Level Info
-Write-SetupLog ("=" * 60) -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
 
 # Create summary report
 $summaryPath = Join-Path $PSScriptRoot "Logs" "SetupSummary_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"

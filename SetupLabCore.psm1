@@ -195,10 +195,15 @@ function Start-SetupDownload {
             try {
                 # Fallback to WebClient
                 $webClient = New-Object System.Net.WebClient
-                $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                $webClient.DownloadFile($Url, $Destination)
-                $success = $true
-                Write-SetupLog "Download completed using WebClient" -Level Success
+                try {
+                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    $webClient.DownloadFile($Url, $Destination)
+                    $success = $true
+                    Write-SetupLog "Download completed using WebClient" -Level Success
+                }
+                finally {
+                    $webClient.Dispose()
+                }
             }
             catch {
                 Write-SetupLog "WebClient download failed: $_" -Level Error
@@ -572,7 +577,13 @@ function Start-ParallelInstallation {
         # Start new jobs if under concurrency limit
         while ($running.Count -lt $MaxConcurrency -and $pending.Count -gt 0) {
             $installation = $pending[0]
-            $pending = $pending[1..($pending.Count - 1)]
+            
+            # Remove from pending array immediately to prevent reprocessing
+            if ($pending.Count -gt 1) {
+                $pending = $pending[1..($pending.Count - 1)]
+            } else {
+                $pending = @()
+            }
             
             # Skip if validation enabled and already installed
             if (-not $SkipValidation) {
@@ -744,12 +755,12 @@ function Start-ParallelInstallation {
     }
     
     # Summary
-    Write-SetupLog ("=" * 60) -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
     Write-SetupLog "Installation Summary:" -Level Info
     Write-SetupLog "  Completed: $($completed.Count)" -Level Success
     Write-SetupLog "  Failed: $($failed.Count)" -Level $(if ($failed.Count -gt 0) { 'Error' } else { 'Info' })
     Write-SetupLog "  Skipped: $($skipped.Count)" -Level Info
-    Write-SetupLog ("=" * 60) -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
     
     return @{
         Completed = $completed

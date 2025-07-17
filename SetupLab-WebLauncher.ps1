@@ -122,7 +122,7 @@ function Download-File {
 
 #region Main Execution
 Write-WebLog "SetupLab Web Launcher" -Level Info
-Write-WebLog ("=" * 60) -Level Info
+Write-WebLog (("=" * 60)) -Level Info
 
 # Ensure BaseUrl doesn't end with a slash
 $BaseUrl = $BaseUrl.TrimEnd('/')
@@ -204,8 +204,7 @@ try {
     # Change to temp directory to ensure relative paths work
     Push-Location $tempDir
     
-    # Set execution policy for this process
-    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+    # Execution policy is not needed when using -File parameter
     
     # Execute the script
     & $mainScriptPath @mainParams

@@ -76,3 +76,10 @@
 [2025-07-17 15:32:01] [Error] WebClient download failed: Exception calling "DownloadFile" with "2" argument(s): "The remote server returned an error: (404) Not Found."
 [2025-07-17 15:32:14] [Info] Download attempt 1 of 2 for: https://raw.githubusercontent.com/aollivierre/setuplab/main/Readme.md
 [2025-07-17 15:32:14] [Success] Download completed using BITS
+[2025-07-17 16:33:37] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-17 16:33:37] [Info] ============================================================
+[2025-07-17 16:33:37] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:33:37] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-17 16:33:37] [Info] Filtering by software: Claude Code
+[2025-07-17 16:33:37] [Warning] Administrator privileges required. Requesting elevation...
+[2025-07-17 16:33:37] [Warning] Requesting administrator elevation...

@@ -639,7 +639,7 @@ function Start-ParallelInstallation {
                         Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
                     }
                 }
-            } -ArgumentList $PSScriptRoot, $installation
+            } -ArgumentList (Join-Path $PSScriptRoot "SetupLabCore.psm1"), $installation
             
             $running[$job.Id] = @{
                 Job = $job

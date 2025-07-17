@@ -495,7 +495,37 @@ function Invoke-SetupInstaller {
         $npmCommand = "npm $($npmArgs -join ' ')"
         Write-SetupLog "Running: $npmCommand" -Level Debug
         
-        $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $npmCommand -Wait -PassThru -NoNewWindow
+        # Add timeout and better error handling for npm process
+        $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $processStartInfo.FileName = "cmd.exe"
+        $processStartInfo.Arguments = "/c $npmCommand"
+        $processStartInfo.UseShellExecute = $false
+        $processStartInfo.RedirectStandardOutput = $true
+        $processStartInfo.RedirectStandardError = $true
+        $processStartInfo.CreateNoWindow = $true
+        
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $processStartInfo
+        $process.Start() | Out-Null
+        
+        # Wait for process with timeout (60 seconds)
+        $timeoutMilliseconds = 60000
+        if (-not $process.WaitForExit($timeoutMilliseconds)) {
+            Write-SetupLog "NPM installation timed out after 60 seconds" -Level Warning
+            $process.Kill()
+            throw "NPM installation timed out"
+        }
+        
+        # Get output for debugging
+        $stdout = $process.StandardOutput.ReadToEnd()
+        $stderr = $process.StandardError.ReadToEnd()
+        
+        if ($stdout) {
+            Write-SetupLog "NPM stdout: $stdout" -Level Debug
+        }
+        if ($stderr) {
+            Write-SetupLog "NPM stderr: $stderr" -Level Debug
+        }
         
         if ($process.ExitCode -ne 0) {
             throw "NPM installation failed with exit code: $($process.ExitCode)"
@@ -774,8 +804,21 @@ function Start-ParallelInstallation {
             }
         }
         
-        # Check for completed jobs
+        # Check for completed jobs and timeouts
         $completedJobs = $running.Values | Where-Object { $_.Job.State -ne 'Running' }
+        
+        # Check for jobs that have been running too long (more than 5 minutes)
+        $longRunningJobs = $running.Values | Where-Object { 
+            $_.Job.State -eq 'Running' -and 
+            ((Get-Date) - $_.StartTime).TotalMinutes -gt 5 
+        }
+        
+        foreach ($longRunningJob in $longRunningJobs) {
+            Write-SetupLog "$($longRunningJob.Installation.Name) - Installation timed out after 5 minutes, stopping job" -Level Warning
+            Stop-Job -Job $longRunningJob.Job -ErrorAction SilentlyContinue
+            $longRunningJob.Job.State = 'Stopped'
+            $completedJobs += $longRunningJob
+        }
         
         foreach ($jobInfo in $completedJobs) {
             $result = Receive-Job -Job $jobInfo.Job
@@ -783,12 +826,18 @@ function Start-ParallelInstallation {
             
             $duration = ((Get-Date) - $jobInfo.StartTime).ToString("mm\:ss")
             
-            if ($result.Success) {
+            # Handle timeout cases
+            if ($jobInfo.Job.State -eq 'Stopped') {
+                Write-SetupLog "$($jobInfo.Installation.Name) - Failed: Installation timed out (Duration: $duration)" -Level Error
+                $failed += $jobInfo.Installation
+            }
+            elseif ($result -and $result.Success) {
                 Write-SetupLog "$($result.Name) - $($result.Message) (Duration: $duration)" -Level Success
                 $completed += $jobInfo.Installation
             }
             else {
-                Write-SetupLog "$($result.Name) - Failed: $($result.Message) (Duration: $duration)" -Level Error
+                $errorMsg = if ($result) { $result.Message } else { "Job completed without result" }
+                Write-SetupLog "$($jobInfo.Installation.Name) - Failed: $errorMsg (Duration: $duration)" -Level Error
                 $failed += $jobInfo.Installation
             }
             

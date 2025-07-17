@@ -293,7 +293,11 @@ Configuration:
   Config File: $ConfigFile
 "@
 
-$summary | Out-File -FilePath $summaryPath -Encoding UTF8
+try {
+    $summary | Out-File -FilePath $summaryPath -Encoding UTF8
+} catch {
+    Write-SetupLog "Could not save summary report: $_" -Level Warning
+}
 Write-SetupLog "Summary report saved to: $summaryPath" -Level Info
 #endregion
 

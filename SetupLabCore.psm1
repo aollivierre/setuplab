@@ -255,7 +255,30 @@ function Test-SoftwareInstalled {
         [version]$MinimumVersion
     )
     
+    # Special handling for Windows Terminal (MSIX package)
+    if ($Name -eq "Windows Terminal") {
+        try {
+            $package = Get-AppxPackage -Name "Microsoft.WindowsTerminal" -ErrorAction SilentlyContinue
+            if ($package) {
+                Write-SetupLog "$Name version $($package.Version) found via MSIX package" -Level Success
+                return $true
+            }
+        } catch {
+            Write-SetupLog "Could not check MSIX packages for Windows Terminal" -Level Debug
+        }
+    }
+    
     # Check executable path first if provided
+    if ($ExecutablePath) {
+        # Expand environment variables in the path
+        $expandedPath = [System.Environment]::ExpandEnvironmentVariables($ExecutablePath)
+        if (Test-Path $expandedPath) {
+            $ExecutablePath = $expandedPath
+        } else {
+            $ExecutablePath = $null
+        }
+    }
+    
     if ($ExecutablePath -and (Test-Path $ExecutablePath)) {
         if ($MinimumVersion) {
             try {
@@ -455,6 +478,14 @@ function Invoke-SetupInstaller {
             throw "npm is not available. Please install Node.js first."
         }
         
+        # Verify npm is executable
+        try {
+            $npmVersion = & npm --version 2>&1
+            Write-SetupLog "Using npm version: $npmVersion" -Level Debug
+        } catch {
+            throw "npm is not working properly: $_"
+        }
+        
         # Build npm install command
         $npmArgs = @("install", "-g", $NpmPackage) + $NpmInstallArgs
         
@@ -494,8 +525,18 @@ function Invoke-SetupInstaller {
         }
         
         'MSIX' {
-            Add-AppxPackage -Path $InstallerPath -ErrorAction Stop
-            return
+            try {
+                Add-AppxPackage -Path $InstallerPath -ErrorAction Stop
+                return
+            } catch {
+                # Check if it's a version conflict
+                if ($_.Exception.Message -match "higher version.*already installed") {
+                    Write-SetupLog "A higher version is already installed - skipping" -Level Info
+                    return
+                } else {
+                    throw $_
+                }
+            }
         }
         
         'EXE' {

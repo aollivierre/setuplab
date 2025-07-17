@@ -5,7 +5,8 @@
       "Bash(powershell:*)",
       "Bash(ls:*)",
       "Bash(mv:*)",
-      "Bash(rmdir:*)"
+      "Bash(rmdir:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

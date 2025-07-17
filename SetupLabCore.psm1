@@ -261,33 +261,56 @@ function Test-SoftwareInstalled {
         "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
     )
     
+    $found = $false
+    $meetsVersionRequirement = $false
+    
     foreach ($path in $registryPaths) {
+        if ($found) { break }  # Exit early if already found
+        
         $installed = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-            Where-Object { $_.DisplayName -like "*$searchName*" }
+            Where-Object { $_.DisplayName -like "*$searchName*" } |
+            Select-Object -First 1  # Only check first match to avoid duplicates
         
         if ($installed) {
+            $found = $true
+            
             if ($MinimumVersion -and $installed.DisplayVersion) {
                 try {
                     $currentVersion = [version]($installed.DisplayVersion -replace '[^\d\.]', '')
                     
                     if ($currentVersion -ge $MinimumVersion) {
                         Write-SetupLog "$Name version $currentVersion found in registry (meets minimum $MinimumVersion)" -Level Success
-                        return $true
+                        $meetsVersionRequirement = $true
                     }
                     else {
                         Write-SetupLog "$Name version $currentVersion found but below minimum $MinimumVersion" -Level Warning
-                        return $false
+                        $meetsVersionRequirement = $false
                     }
                 }
                 catch {
                     Write-SetupLog "Could not parse version for $Name" -Level Warning
+                    # If we can't parse version but need minimum version, consider it not meeting requirement
+                    $meetsVersionRequirement = $false
                 }
             }
             else {
-                Write-SetupLog "$Name found in registry" -Level Success
-                return $true
+                # No version requirement or no version info available
+                if (-not $MinimumVersion) {
+                    Write-SetupLog "$Name found in registry" -Level Success
+                    $meetsVersionRequirement = $true
+                }
+                else {
+                    Write-SetupLog "$Name found but version information not available" -Level Warning
+                    $meetsVersionRequirement = $false
+                }
             }
+            
+            break  # Exit the loop after processing first match
         }
+    }
+    
+    if ($found) {
+        return $meetsVersionRequirement
     }
     
     Write-SetupLog "$Name not found on system" -Level Info

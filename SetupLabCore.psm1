@@ -28,8 +28,8 @@ if (-not (Test-Path $script:TempPath)) {
 function Write-SetupLog {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Message,
+        [Parameter(Mandatory = $false)]
+        [string]$Message = "",
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Info', 'Success', 'Warning', 'Error', 'Debug')]
@@ -40,7 +40,7 @@ function Write-SetupLog {
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
+    $logMessage = if ($Message) { "[$timestamp] [$Level] $Message" } else { "" }
     $logFilePath = Join-Path $script:LogPath $LogFile
     
     # Write to log file
@@ -55,7 +55,11 @@ function Write-SetupLog {
         default   { 'White' }
     }
     
-    Write-Host $logMessage -ForegroundColor $color
+    if ($Message) {
+        Write-Host $logMessage -ForegroundColor $color
+    } else {
+        Write-Host ""
+    }
 }
 #endregion
 

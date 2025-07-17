@@ -4,12 +4,13 @@
 
 - **Recommended: Using Web Launcher (downloads all dependencies)**:
     ```powershell
-    iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
+    # For fresh machines (sets execution policy for current session):
+    Set-ExecutionPolicy Bypass -Scope Process -Force; iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
     ```
     
     Or with parameters:
     ```powershell
-    & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
+    Set-ExecutionPolicy Bypass -Scope Process -Force; & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
     ```
 
 - **Alternative: Direct execution (for simple scripts only)**:
@@ -75,20 +76,20 @@ Perfect! I've successfully created a modern, modular PowerShell setup framework 
 
   ## Web Execution (no local files required):
   ```powershell
-  # Install everything with defaults
-  iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
+  # Install everything with defaults (includes execution policy bypass for fresh machines)
+  Set-ExecutionPolicy Bypass -Scope Process -Force; iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
 
   # Skip validation and use 6 concurrent installs
-  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
+  Set-ExecutionPolicy Bypass -Scope Process -Force; & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
 
   # Install only Development and Browsers categories
-  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Categories "Development","Browsers"
+  Set-ExecutionPolicy Bypass -Scope Process -Force; & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Categories "Development","Browsers"
 
   # Install specific software only
-  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Software "Git","Chrome","VSCode"
+  Set-ExecutionPolicy Bypass -Scope Process -Force; & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Software "Git","Chrome","VSCode"
 
   # List all available software
-  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -ListSoftware
+  Set-ExecutionPolicy Bypass -Scope Process -Force; & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -ListSoftware
   ```
 
   🎯 Configuration

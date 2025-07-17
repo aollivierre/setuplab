@@ -204,6 +204,9 @@ try {
     # Change to temp directory to ensure relative paths work
     Push-Location $tempDir
     
+    # Set execution policy for this process
+    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+    
     # Execute the script
     & $mainScriptPath @mainParams
     

@@ -282,6 +282,43 @@ function Test-SoftwareInstalled {
     if ($ExecutablePath -and (Test-Path $ExecutablePath)) {
         if ($MinimumVersion) {
             try {
+                # Special handling for PowerShell 7
+                if ($Name -eq "PowerShell 7") {
+                    # Try to get version directly from pwsh.exe
+                    $versionOutput = & $ExecutablePath --version 2>$null
+                    if ($versionOutput -and $versionOutput -match "PowerShell (\d+\.\d+\.\d+)") {
+                        $currentVersion = [version]$matches[1]
+                        
+                        if ($currentVersion -ge $MinimumVersion) {
+                            Write-SetupLog "$Name version $currentVersion found (meets minimum $MinimumVersion)" -Level Success
+                            return $true
+                        }
+                        else {
+                            Write-SetupLog "$Name version $currentVersion found but below minimum $MinimumVersion" -Level Warning
+                            return $false
+                        }
+                    }
+                }
+                
+                # Special handling for Git
+                if ($Name -eq "Git") {
+                    # Try to get version directly from git.exe
+                    $versionOutput = & $ExecutablePath --version 2>$null
+                    if ($versionOutput -and $versionOutput -match "git version (\d+\.\d+\.\d+)") {
+                        $currentVersion = [version]$matches[1]
+                        
+                        if ($currentVersion -ge $MinimumVersion) {
+                            Write-SetupLog "$Name version $currentVersion found (meets minimum $MinimumVersion)" -Level Success
+                            return $true
+                        }
+                        else {
+                            Write-SetupLog "$Name version $currentVersion found but below minimum $MinimumVersion" -Level Warning
+                            return $false
+                        }
+                    }
+                }
+                
+                # Standard version detection for other software
                 $versionInfo = (Get-Item $ExecutablePath).VersionInfo
                 $currentVersion = [version]($versionInfo.ProductVersion -replace '[^\d\.]', '')
                 
@@ -295,7 +332,7 @@ function Test-SoftwareInstalled {
                 }
             }
             catch {
-                Write-SetupLog "Could not determine version for $Name" -Level Warning
+                Write-SetupLog "Could not determine version for $Name from executable, checking registry..." -Level Debug
             }
         }
         else {

@@ -92,11 +92,11 @@
     {
         "Name":  "FileLocator Pro",
         "Category":  "Utilities",
-        "URL":  "https://download.mythicsoft.com/flp/FileLocatorPro_3522_x64.msi",
-        "Status":  "Failed",
-        "FileSize":  0,
-        "Error":  "The remote server returned an error: (403) Forbidden.",
-        "Filename":  "FileLocatorPro_3522_x64.msi"
+        "URL":  "https://download.mythicsoft.com/flp/3522/filelocator_3522.exe",
+        "Status":  "Success",
+        "FileSize":  111.46,
+        "Error":  "",
+        "Filename":  "filelocator_3522.exe"
     },
     {
         "Name":  "Visual C++ Redistributables",
@@ -137,10 +137,10 @@
     {
         "Name":  "Warp Terminal",
         "Category":  "Utilities",
-        "URL":  "https://app.warp.dev/download/win",
+        "URL":  "https://releases.warp.dev/stable/v0.2025.07.09.08.11.stable_01/WarpSetup.exe",
         "Status":  "Success",
-        "FileSize":  0,
+        "FileSize":  43.72,
         "Error":  "",
-        "Filename":  "win"
+        "Filename":  "WarpSetup.exe"
     }
 ]

@@ -9,7 +9,9 @@
       "Bash(rm:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
     ],
     "deny": []
   }

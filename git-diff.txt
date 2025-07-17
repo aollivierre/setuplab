@@ -1,1656 +1,1533 @@
-﻿diff --git a/.Scaffolding/Save-GitDiff-txt.ps1 b/.Scaffolding/Save-GitDiff-txt.ps1
+﻿diff --git a/Examples/webscript/Download-Modules.ps1 b/Examples/webscript/Download-Modules.ps1
 new file mode 100644
-index 0000000..fe666f4
+index 0000000..e6402e3
 --- /dev/null
-+++ b/.Scaffolding/Save-GitDiff-txt.ps1
-@@ -0,0 +1,203 @@
-+#requires -Version 5.1
-+
-+<#
-+.SYNOPSIS
-+    Saves git diff output to a file.
-+
-+.DESCRIPTION
-+    This script runs 'git add --all' to stage all changes, then runs 'git diff --cached' 
-+    and saves the output to a specified file. The script confirms the repository and branch
-+    with the user before proceeding.
-+
-+.PARAMETER OutputFile
-+    The path to the file where the git diff output will be saved.
-+    Default is 'git-diff.txt' in the current directory.
-+
-+.PARAMETER SkipConfirmation
-+    If specified, skips the confirmation step.
-+
-+.EXAMPLE
-+    .\Save-GitDiff.ps1
-+    Saves the git diff output to git-diff.txt in the current directory.
-+
-+.EXAMPLE
-+    .\Save-GitDiff.ps1 -OutputFile "C:\temp\my-changes.diff"
-+    Saves the git diff output to the specified file path.
-+
-+.EXAMPLE
-+    .\Save-GitDiff.ps1 -SkipConfirmation
-+    Skips the confirmation step and proceeds directly.
-+#>
-+
-+[CmdletBinding()]
-+param (
-+    [Parameter(Position = 0)]
-+    [string]$OutputFile = "git-diff.txt",
-+    
-+    [Parameter()]
-+    [switch]$SkipConfirmation
-+)
-+
-+# Verify git is installed
-+try {
-+    $null = Get-Command git -ErrorAction Stop
-+}
-+catch {
-+    Write-Error "Git is not installed or not in the PATH. Please install Git or add it to your PATH."
-+    exit 1
-+}
-+
-+# Verify we're in a git repository
-+if (-not (Test-Path -Path ".git" -PathType Container)) {
-+    Write-Error "This directory is not a git repository. Please run this script from a git repository."
-+    exit 1
-+}
-+
-+# Get repository and branch information
-+try {
-+    $repoName = Split-Path -Path (git rev-parse --show-toplevel) -Leaf
-+    $currentBranch = git rev-parse --abbrev-ref HEAD
-+}
-+catch {
-+    Write-Error "Failed to get repository information: $_"
-+    exit 1
-+}
-+
-+# Confirm with user
-+if (-not $SkipConfirmation) {
-+    Write-Host "Current repository: $repoName" -ForegroundColor Cyan
-+    Write-Host "Current branch: $currentBranch" -ForegroundColor Cyan
-+    
-+    # Get list of staged and unstaged changes
-+    $allChanges = git status --porcelain
-+    
-+    # Filter for unstaged changes (those not fully staged)
-+    $unstagedChanges = $allChanges | Where-Object { 
-+        $_ -match '^.[MADRCU?]' -or $_ -match '^\?\?' 
-+    }
-+    
-+    # Filter for already staged changes
-+    $stagedChanges = $allChanges | Where-Object { 
-+        $_ -match '^[MADRCU]' -and $_ -notmatch '^.[MADRCU?]' 
-+    }
-+    
-+    $unstagedCount = ($unstagedChanges | Measure-Object).Count
-+    $stagedCount = ($stagedChanges | Measure-Object).Count
-+    
-+    # Show already staged changes
-+    if ($stagedCount -gt 0) {
-+        Write-Host "`nAlready staged changes ($stagedCount):" -ForegroundColor Green
-+        $stagedChanges | ForEach-Object {
-+            $status = $_.Substring(0, 2)
-+            $file = $_.Substring(3)
-+            
-+            $statusText = switch -Regex ($status) {
-+                '^M.'   { "Modified:   " }
-+                '^A.'   { "Added:      " }
-+                '^D.'   { "Deleted:    " }
-+                '^R.'   { "Renamed:    " }
-+                '^C.'   { "Copied:     " }
-+                default { "Changed:    " }
-+            }
-+            
-+            Write-Host "  $statusText$file" -ForegroundColor DarkGreen
-+        }
-+    }
-+    
-+    # Show new changes to be staged
-+    Write-Host "`nNew changes to be staged ($unstagedCount):" -ForegroundColor Yellow
-+    if ($unstagedCount -gt 0) {
-+        $unstagedChanges | ForEach-Object {
-+            $status = $_.Substring(0, 2)
-+            $file = $_.Substring(3)
-+            
-+            $statusText = switch -Regex ($status) {
-+                '^\?\?' { "Untracked:  " }
-+                '^.M'   { "Modified:   " }
-+                '^.A'   { "Added:      " }
-+                '^.D'   { "Deleted:    " }
-+                '^.R'   { "Renamed:    " }
-+                '^.C'   { "Copied:     " }
-+                default { "Changed:    " }
-+            }
-+            
-+            Write-Host "  $statusText$file"
-+        }
-+    } else {
-+        Write-Host "  No new changes to stage" -ForegroundColor Gray
-+    }
-+    
-+    # If no changes at all
-+    if ($stagedCount -eq 0 -and $unstagedCount -eq 0) {
-+        Write-Host "  No changes detected in this repository" -ForegroundColor Gray
-+    }
-+    
-+    Write-Host "`nThis script will stage all changes with 'git add --all' and save the diff to $OutputFile" -ForegroundColor Yellow
-+    
-+    $confirmation = Read-Host -Prompt "Do you want to proceed? (Y/N)"
-+    if ($confirmation -ne 'Y' -and $confirmation -ne 'y') {
-+        Write-Host "Operation cancelled by user." -ForegroundColor Red
-+        exit 0
-+    }
-+}
-+
-+# Stage all changes
-+try {
-+    Write-Verbose "Staging all changes with 'git add --all'"
-+    git add --all
-+    
-+    # Unstage the output file if it was staged
-+    # This prevents the output file from being part of the diff
-+    if (Test-Path -Path $OutputFile) {
-+        Write-Verbose "Unstaging output file: $OutputFile"
-+        git reset HEAD $OutputFile
-+    }
-+    
-+    Write-Host "All changes have been staged (except the output file)" -ForegroundColor Green
-+}
-+catch {
-+    Write-Error "An error occurred while staging changes: $_"
-+    exit 1
-+}
-+
-+# Get the git diff and save it to the file
-+try {
-+    Write-Verbose "Running 'git diff --cached' and saving to $OutputFile"
-+    
-+    # First, remove the file if it exists - with extra verification
-+    if (Test-Path -Path $OutputFile) {
-+        try {
-+            Remove-Item -Path $OutputFile -Force -ErrorAction Stop
-+            Write-Verbose "Removed existing file: $OutputFile"
-+            # Verify removal
-+            if (Test-Path -Path $OutputFile) {
-+                Write-Error "Failed to remove existing file: $OutputFile"
-+                exit 1
-+            }
-+        }
-+        catch {
-+            Write-Error "Error removing file: $_"
-+            exit 1
-+        }
-+    }
-+    
-+    # Get the diff content
-+    $diffOutput = git diff --cached
-+    
-+    # Create a new file with the diff content
-+    if ($null -eq $diffOutput -or $diffOutput -eq '') {
-+        Write-Warning "No staged changes found. The output file will be empty."
-+        # Create an empty file
-+        Set-Content -Path $OutputFile -Value "" -Force
-+    } else {
-+        # Restore original behavior but ensure we're creating a new file
-+        # This preserves line breaks properly
-+        Set-Content -Path $OutputFile -Value $diffOutput -Encoding UTF8 -Force
-+    }
-+    
-+    Write-Host "Git diff output saved to $OutputFile"
-+}
-+catch {
-+    Write-Error "An error occurred while running git diff: $_"
-+    exit 1
-+} 
-\ No newline at end of file
-diff --git a/.claude/settings.local.json b/.claude/settings.local.json
-new file mode 100644
-index 0000000..cf7416b
---- /dev/null
-+++ b/.claude/settings.local.json
-@@ -0,0 +1,12 @@
-+{
-+  "permissions": {
-+    "allow": [
-+      "Bash(mkdir:*)",
-+      "Bash(powershell:*)",
-+      "Bash(ls:*)",
-+      "Bash(mv:*)",
-+      "Bash(rmdir:*)"
-+    ],
-+    "deny": []
-+  }
-+}
-\ No newline at end of file
-diff --git a/Enable-RDP.ps1 b/Archive/Enable-RDP.ps1
-similarity index 100%
-rename from Enable-RDP.ps1
-rename to Archive/Enable-RDP.ps1
-diff --git a/Install-7zip.ps1 b/Archive/Install-7zip.ps1
-similarity index 100%
-rename from Install-7zip.ps1
-rename to Archive/Install-7zip.ps1
-diff --git a/Install-DockerDesktop.ps1 b/Archive/Install-DockerDesktop.ps1
-similarity index 100%
-rename from Install-DockerDesktop.ps1
-rename to Archive/Install-DockerDesktop.ps1
-diff --git a/Install-Everything.ps1 b/Archive/Install-Everything.ps1
-similarity index 100%
-rename from Install-Everything.ps1
-rename to Archive/Install-Everything.ps1
-diff --git a/Install-FileLocatorPro.ps1 b/Archive/Install-FileLocatorPro.ps1
-similarity index 100%
-rename from Install-FileLocatorPro.ps1
-rename to Archive/Install-FileLocatorPro.ps1
-diff --git a/Install-Git.ps1 b/Archive/Install-Git.ps1
-similarity index 100%
-rename from Install-Git.ps1
-rename to Archive/Install-Git.ps1
-diff --git a/Install-GitHubCLI.ps1 b/Archive/Install-GitHubCLI.ps1
-similarity index 100%
-rename from Install-GitHubCLI.ps1
-rename to Archive/Install-GitHubCLI.ps1
-diff --git a/Install-GitHubDesktop.ps1 b/Archive/Install-GitHubDesktop.ps1
-similarity index 100%
-rename from Install-GitHubDesktop.ps1
-rename to Archive/Install-GitHubDesktop.ps1
-diff --git a/Install-PowerShell7.ps1 b/Archive/Install-PowerShell7.ps1
-similarity index 100%
-rename from Install-PowerShell7.ps1
-rename to Archive/Install-PowerShell7.ps1
-diff --git a/Install-VCppRedist.ps1 b/Archive/Install-VCppRedist.ps1
-similarity index 100%
-rename from Install-VCppRedist.ps1
-rename to Archive/Install-VCppRedist.ps1
-diff --git a/Install-VSCode.ps1 b/Archive/Install-VSCode.ps1
-similarity index 100%
-rename from Install-VSCode.ps1
-rename to Archive/Install-VSCode.ps1
-diff --git a/Install-WindowsTerminal.ps1 b/Archive/Install-WindowsTerminal.ps1
-similarity index 100%
-rename from Install-WindowsTerminal.ps1
-rename to Archive/Install-WindowsTerminal.ps1
-diff --git a/Archive/archive-old-scripts.ps1 b/Archive/archive-old-scripts.ps1
-new file mode 100644
-index 0000000..e7da638
---- /dev/null
-+++ b/Archive/archive-old-scripts.ps1
++++ b/Examples/webscript/Download-Modules.ps1
 @@ -0,0 +1,20 @@
-+# Archive old installer scripts
-+$scriptsToArchive = @(
-+    "Install-*.ps1",
-+    "setup.ps1"
-+)
 +
-+foreach ($pattern in $scriptsToArchive) {
-+    $files = Get-ChildItem -Path $PSScriptRoot -Filter $pattern -File
-+    
-+    foreach ($file in $files) {
-+        $destination = Join-Path $PSScriptRoot "Archive" $file.Name
-+        
-+        if (Test-Path $file.FullName) {
-+            Write-Host "Moving $($file.Name) to Archive folder..."
-+            Move-Item -Path $file.FullName -Destination $destination -Force
-+        }
-+    }
-+}
-+
-+Write-Host "Archive complete!" -ForegroundColor Green
-\ No newline at end of file
-diff --git a/Archive/move-scripts.ps1 b/Archive/move-scripts.ps1
-new file mode 100644
-index 0000000..6ce3fa5
---- /dev/null
-+++ b/Archive/move-scripts.ps1
-@@ -0,0 +1,29 @@
-+# Move old installer scripts to Archive folder
-+$rootPath = "C:\Code\setuplab"
-+$archivePath = Join-Path $rootPath "Archive"
-+
-+# Ensure Archive folder exists
-+if (-not (Test-Path $archivePath)) {
-+    Write-Host "Creating Archive folder..."
-+    New-Item -Path $archivePath -ItemType Directory -Force
-+}
-+
-+# Move all Install-*.ps1 files
-+Write-Host "Moving Install-*.ps1 files to Archive folder..."
-+$installScripts = Get-ChildItem -Path $rootPath -Filter "Install-*.ps1"
-+foreach ($script in $installScripts) {
-+    $destination = Join-Path $archivePath $script.Name
-+    Write-Host "Moving $($script.Name) to Archive..."
-+    Move-Item -Path $script.FullName -Destination $destination -Force
-+}
-+
-+# Move setup.ps1
-+$setupScript = Join-Path $rootPath "setup.ps1"
-+if (Test-Path $setupScript) {
-+    Write-Host "Moving setup.ps1 to Archive..."
-+    $destination = Join-Path $archivePath "setup.ps1"
-+    Move-Item -Path $setupScript -Destination $destination -Force
-+}
-+
-+Write-Host "`nMove operation completed successfully!"
-+Write-Host "Files moved to: $archivePath"
-\ No newline at end of file
-diff --git a/Archive/setup.ps1 b/Archive/setup.ps1
-index 9ab6fb8..de773a2 100644
---- a/Archive/setup.ps1
-+++ b/Archive/setup.ps1
-@@ -1,15 +1,14 @@
--# call using:
--
--# powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/setuplab/main/setup.ps1)"
--# powershell -Command "iex (irm https://bit.ly/4c3XH76)"
--# powershell -Command "iex (irm bit.ly/4c3XH76)"
--# or if you are in powershell already call (URL is case sensitive)
--# iex (irm bit.ly/4c3XH76)
--
--
- # Initialize the global steps list
- $global:steps = [System.Collections.Generic.List[PSCustomObject]]::new()
- $global:currentStep = 0
-+$processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
-+$installationResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-+
-+
-+function Test-Admin {
-+    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-+    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-+}
- 
- # Function to add a step
- function Add-Step {
-@@ -24,22 +23,37 @@ function Log-Step {
-     $global:currentStep++
-     $totalSteps = $global:steps.Count
-     $stepDescription = $global:steps[$global:currentStep - 1].Description
--    Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription"
-+    Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription" -ForegroundColor Cyan
- }
- 
--# Function for logging
-+# Function for logging with color coding
- function Write-Log {
-     param (
-         [string]$Message,
-         [string]$Level = "INFO"
-     )
--    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
--    $logMessage = "[$timestamp] [$Level] $Message"
--    Write-Host $logMessage
-+
-+    # Get the PowerShell call stack to determine the actual calling function
-+    $callStack = Get-PSCallStack
-+    $callerFunction = if ($callStack.Count -ge 2) { $callStack[1].Command } else { '<Unknown>' }
-+
-+    # Prepare the formatted message with the actual calling function information
-+    $formattedMessage = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] [$callerFunction] $Message"
-+
-+    # Display the log message based on the log level using Write-Host
-+    switch ($Level.ToUpper()) {
-+        "DEBUG" { Write-Host $formattedMessage -ForegroundColor DarkGray }
-+        "INFO" { Write-Host $formattedMessage -ForegroundColor Green }
-+        "NOTICE" { Write-Host $formattedMessage -ForegroundColor Cyan }
-+        "WARNING" { Write-Host $formattedMessage -ForegroundColor Yellow }
-+        "ERROR" { Write-Host $formattedMessage -ForegroundColor Red }
-+        "CRITICAL" { Write-Host $formattedMessage -ForegroundColor Magenta }
-+        default { Write-Host $formattedMessage -ForegroundColor White }
-+    }
- 
-     # Append to log file
--    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'install-scripts.log')
--    $logMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
-+    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'setuplab.log')
-+    $formattedMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
- }
- 
- # Function to validate URL
-@@ -50,95 +64,248 @@ function Test-Url {
-     try {
-         Invoke-RestMethod -Uri $url -Method Head -ErrorAction Stop
-         return $true
--    } catch {
-+    }
-+    catch {
-         return $false
-     }
- }
- 
--# Function to execute scripts with retry
--# ToDO - Test the following and replace the main logic with this function as it has the potential of doing wait and retry mechanism
--# function Execute-ScriptWithRetry {
--#     param (
--#         [string]$url,
--#         [int]$maxRetries = 3,
--#         [string]$powerShellPath
--#     )
--#     $attempt = 0
--#     $success = $false
--
--#     while ($attempt -lt $maxRetries -and -not $success) {
--#         try {
--#             $attempt++
--#             $scriptContent = Invoke-RestMethod -Uri $url
--#             $scriptPath = [System.IO.Path]::Combine($env:TEMP, [System.IO.Path]::GetFileName($url))
--#             $scriptContent | Out-File -FilePath $scriptPath -Encoding utf8
--
--#             $startProcessParams = @{
--#                 FilePath     = $powerShellPath
--#                 ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scriptPath)
--#                 Verb         = "RunAs"
--#             }
--#             Start-Process @startProcessParams -Wait
--
--#             Write-Log "Script executed successfully: $url" -Level "INFO"
--#             $success = $true
--#         } catch {
--#             Write-Log "Attempt $attempt failed for script $url $_" -Level "ERROR"
--#             if ($attempt -eq $maxRetries) {
--#                 throw "Maximum retry attempts reached for script $url."
--#             }
--#             Start-Sleep -Seconds 5
--#         }
--#     }
--# }
--
- # Function to get PowerShell path
- function Get-PowerShellPath {
-     if (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe") {
-         return "C:\Program Files\PowerShell\7\pwsh.exe"
--    } elseif (Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") {
-+    }
-+    elseif (Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") {
-         return "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
--    } else {
-+    }
-+    else {
-         throw "Neither PowerShell 7 nor PowerShell 5 was found on this system."
-     }
- }
- 
--# Define the GitHub URLs of the scripts
--$scriptUrls = @(
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Everything.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1",
--    "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"
-+
-+# Function to validate software installation via registry with retry mechanism
-+
-+
-+# Function to validate software installation via registry with retry mechanism
-+function Validate-Installation {
++function Download-Modules {
 +    param (
-+        [string]$SoftwareName,
-+        [version]$MinVersion = [version]"0.0.0.0",
-+        [string]$RegistryPath = "",
-+        [int]$MaxRetries = 3,
-+        [int]$DelayBetweenRetries = 5  # Delay in seconds
++        [array]$scriptDetails  # Array of script details, including URLs
 +    )
 +
-+    if ($SoftwareName -eq "RDP") {
-+        return @{ IsInstalled = $false }  # Force the RDP script to always run
-+    }
++    $processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 +
-+    if ($SoftwareName -eq "Windows Terminal") {
-+        return @{ IsInstalled = $false }  # Force the Windows Terminal script to always run as it will handle its own validation logic
-+    }
-+
-+    $retryCount = 0
-+    $validationSucceeded = $false
-+
-+    while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
-+        $registryPaths = @(
-+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-+            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"  # Include HKCU for user-installed apps
-+        )
-+
-+        if ($RegistryPath) {
-+            # If a specific registry path is provided, check only that path
-+            if (Test-Path $RegistryPath) {
-+                $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
-+                if ($app -and $app.DisplayName -like "*$SoftwareName*") {
-+                    $installedVersion = [version]$app.DisplayVersion
-+                    if ($installedVersion -ge $MinVersion) {
-+                        $validationSucceeded = $true
-+                        return @{
-+                            IsInstalled = $true
-+                            Version     = $installedVersion
-+                            ProductCode = $app.PSChildName
-+                        }
-+                    }
-+                }
-+            }
-+        }
-+        else {
-+            # If no specific registry path, check standard locations
-+            foreach ($path in $registryPaths) {
-+                $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-+                foreach ($item in $items) {
-+                    $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
-+                    if ($app.DisplayName -like "*$SoftwareName*") {
-+                        $installedVersion = [version]$app.DisplayVersion
-+                        if ($installedVersion -ge $MinVersion) {
-+                            $validationSucceeded = $true
-+                            return @{
-+                                IsInstalled = $true
-+                                Version     = $installedVersion
-+                                ProductCode = $app.PSChildName
-+                            }
-+                        }
-+                    }
-+                }
-+            }
-+        }
-+
-+        $retryCount++
-+        if (-not $validationSucceeded) {
-+            Write-Log "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
-+            Start-Sleep -Seconds $DelayBetweenRetries
++    foreach ($scriptDetail in $scriptDetails) {
++        $process = Invoke-WebScript -url $scriptDetail.Url
++        if ($process) {
++            $processList.Add($process)
 +        }
 +    }
 +
-+    return @{IsInstalled = $false }
-+}
-+
-+
-+
-+
-+
-+# Define the GitHub URLs of the scripts and corresponding software names
-+$scriptDetails = @(
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1"; SoftwareName = "7-Zip"; MinVersion = [version]"24.07.0.0" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1"; SoftwareName = "Visual Studio Code"; MinVersion = [version]"1.82.1.0" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Everything.ps1"; SoftwareName = "Everything"; MinVersion = [version]"1.4.1.1024" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.5.2968" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.3.6.0" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.20.240626001" },
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
-+    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-DockerDesktop.ps1"; SoftwareName = "Docker Desktop"; MinVersion = [version]"4.34.2" } 
- )
- 
-+
- # Add steps for each script
--foreach ($url in $scriptUrls) {
--    Add-Step ("Running script from URL: $url")
-+foreach ($detail in $scriptDetails) {
-+    Add-Step ("Running script from URL: $($detail.Url)")
- }
- 
- # Main script execution with try-catch for error handling
- try {
-+
-+    # Elevate to administrator if not already
-+    if (-not (Test-Admin)) {
-+        Write-Log "Restarting script with elevated permissions..."
-+        $startProcessParams = @{
-+            FilePath     = "powershell.exe"
-+            ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
-+            Verb         = "RunAs"
-+        }
-+        Start-Process @startProcessParams
-+        exit
-+    }
-+    
-+
-     $powerShellPath = Get-PowerShellPath
- 
--    foreach ($url in $scriptUrls) {
--        if (Test-Url -url $url) {
--            Log-Step
--            Write-Log "Running script from URL: $url"
--            $startProcessParams = @{
--                FilePath     = $powerShellPath
--                ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')")
--                Verb         = "RunAs"
-+    foreach ($detail in $scriptDetails) {
-+        $url = $detail.Url
-+        $softwareName = $detail.SoftwareName
-+        $minVersion = $detail.MinVersion
-+        $registryPath = $detail.RegistryPath  # Directly extract RegistryPath
-+
-+        # Validate before running the installation script
-+        Write-Log "Validating existing installation of $softwareName..."
-+
-+        # Pass RegistryPath if it's available
-+        $installationCheck = if ($registryPath) {
-+            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5 -RegistryPath $registryPath
-+        }
-+        else {
-+            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
-+        }
-+
-+        if ($installationCheck.IsInstalled) {
-+            Write-Log "$softwareName version $($installationCheck.Version) is already installed. Skipping installation." -Level "INFO"
-+            $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Already Installed"; VersionFound = $installationCheck.Version })
-+        }
-+        else {
-+            if (Test-Url -url $url) {
-+                Log-Step
-+                Write-Log "Running script from URL: $url" -Level "INFO"
-+                # $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
-+
-+                $startProcessParams = @{
-+                    FilePath     = $powerShellPath
-+                    ArgumentList = @(
-+                        "-NoExit",
-+                        "-NoProfile",
-+                        "-ExecutionPolicy", "Bypass",
-+                        "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')"
-+                    )
-+                    Verb         = "RunAs"
-+                    PassThru     = $true
-+                }
-+                
-+                $process = Start-Process @startProcessParams
-+                
-+                $processList.Add($process)
-+
-+                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })
-+            }
-+            else {
-+                Write-Log "URL $url is not accessible" -Level "ERROR"
-+                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Failed - URL Not Accessible"; VersionFound = "N/A" })
-             }
--            Start-Process @startProcessParams
--        } else {
--            Write-Log "URL $url is not accessible" -Level "ERROR"
-         }
-     }
-+
-+    # Wait for all processes to complete
++    # Optionally wait for all processes to complete
 +    foreach ($process in $processList) {
 +        $process.WaitForExit()
 +    }
-+
-+    # Post-installation validation
-+    foreach ($result in $installationResults) {
-+        if ($result.Status -eq "Installed") {
-+            if ($result.SoftwareName -in @("RDP", "Windows Terminal")) {
-+                Write-Log "Skipping post-installation validation for $($result.SoftwareName)." -Level "INFO"
-+                $result.Status = "Successfully Installed"
-+                continue
-+            }
-+
-+            Write-Log "Validating installation of $($result.SoftwareName)..."
-+            $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion ($scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName }).MinVersion
-+
-+            if ($validationResult.IsInstalled) {
-+                Write-Log "Validation successful: $($result.SoftwareName) version $($validationResult.Version) is installed." -Level "INFO"
-+                $result.VersionFound = $validationResult.Version
-+                $result.Status = "Successfully Installed"
-+            }
-+            else {
-+                Write-Log "Validation failed: $($result.SoftwareName) was not found on the system." -Level "ERROR"
-+                $result.Status = "Failed - Not Found After Installation"
-+            }
-+        }
-+    }
-+
-+
-+    # Summary report
-+    $totalSoftware = $installationResults.Count
-+    $successfulInstallations = $installationResults | Where-Object { $_.Status -eq "Successfully Installed" }
-+    $alreadyInstalled = $installationResults | Where-Object { $_.Status -eq "Already Installed" }
-+    $failedInstallations = $installationResults | Where-Object { $_.Status -like "Failed*" }
-+
-+    Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
-+    Write-Host "Successful Installations: $($successfulInstallations.Count)" -ForegroundColor Green
-+    Write-Host "Already Installed: $($alreadyInstalled.Count)" -ForegroundColor Yellow
-+    Write-Host "Failed Installations: $($failedInstallations.Count)" -ForegroundColor Red
-+
-+    # Detailed Summary
-+    Write-Host "`nDetailed Summary:" -ForegroundColor Cyan
-+    $installationResults | ForEach-Object {
-+        Write-Host "Software: $($_.SoftwareName)" -ForegroundColor White
-+        Write-Host "Status: $($_.Status)" -ForegroundColor White
-+        Write-Host "Version Found: $($_.VersionFound)" -ForegroundColor White
-+        Write-Host "----------------------------------------" -ForegroundColor Gray
-+    }
- }
- catch {
-     # Capture the error details
-@@ -147,5 +314,6 @@ catch {
-     throw
- }
- 
-+
- # Keep the PowerShell window open to review the logs
--Read-Host 'Press Enter to close this window...'
-+Read-Host 'Press Enter to close this window...'
++}
 \ No newline at end of file
-diff --git a/CLAUDE.md b/CLAUDE.md
+diff --git a/Examples/webscript/Install-GitFromWeb.ps1 b/Examples/webscript/Install-GitFromWeb.ps1
 new file mode 100644
-index 0000000..34f2e70
+index 0000000..db4c946
 --- /dev/null
-+++ b/CLAUDE.md
-@@ -0,0 +1,30 @@
-+**PowerShell 5.1 vs 7 Compatibility Issues:**
-+<?xml version="1.0" encoding="UTF-8"?>
-+<PowerShellCodingStandards version="1.0">
-+  <!-- CRITICAL STANDARDS -->
-+  <!-- Variables: Never place colons after variable names ($var: value), use proper spacing or ${var}: -->
-+  <!-- Operators: Use -and, -or, -not, -eq, -ne, -gt, -lt, -ge, -le; NEVER use &&, ||, !, ==, !=, >, <, >=, <= -->
-+  <!-- Null: Place $null on LEFT side of comparisons: ($null -eq $var) NOT ($var -eq $null) -->
-+  <!-- Conditionals: Use ($result = if ($cond) { $true } else { $false }) NOT ternary operators -->
-+  <!-- Special Ops: NEVER use PowerShell 7+ operators (??, ?.) in PowerShell 5.1 code -->
-+  <!-- Params: Never use reserved parameter names (Verbose, Debug, ErrorAction, etc.) -->
-+  <!-- Variables: Never reassign automatic variables like $PSScriptRoot or $MyInvocation -->
-+  <!-- Strings: Use ASCII-compatible chars, not Unicode symbols like ? or ? -->
-+  <!-- String Multiplication: Use parentheses for string multiplication in concatenation: ("=" * 60) NOT "="*60 -->
-+  <!-- Modules: Place all Export-ModuleMember statements ONLY in the main .psm1 file -->
-+  <!-- Functions: Always include complete comment-based help for all functions -->
-+  <!-- Organization: Use #region/#endregion markers for logical code sections -->
-+  <!-- Comments: Include detailed comments for initialization, logic, loops, error handling -->
-+  <!-- CRITICAL: NEVER USE PESTER FOR TESTING UNDER ANY CIRCUMSTANCES! -->
-+  <!-- Use script-based testing with functions and try/catch blocks instead -->
-+  <!-- If lint errors persist after a few attempts, do not continue trying to fix them. Instead, inform the human user about the persistent errors and request manual intervention. -->
-+  
-+  <!-- COMMAND LINE EXECUTION BEST PRACTICES -->
-+  <!-- PowerShell -Command: Prone to escaping issues with $, {}, quotes, <, > characters -->
-+  <!-- PowerShell -File: Much more reliable for complex scripts - write to .ps1 file first -->
-+  <!-- Unix Tools: Prefer grep, awk, sed for text processing - more predictable and composable -->
-+  <!-- Mixed Approach: Use PowerShell for Windows-specific tasks (registry, WMI), Unix tools for general processing -->
-+  <!-- Complex Commands: For multi-line or complex PowerShell, ALWAYS use script files instead of -Command -->
-+  <!-- Escaping: When using -Command, be extremely careful with special characters and quotes -->
-+  <!-- Path Handling: Use forward slashes in Git Bash, backslashes in PowerShell scripts -->
-+</PowerShellCodingStandards>
-\ No newline at end of file
-diff --git a/DarkTheme/README.md b/DarkTheme/README.md
-new file mode 100644
-index 0000000..e091170
---- /dev/null
-+++ b/DarkTheme/README.md
-@@ -0,0 +1,61 @@
-+# Windows Theme Setter PowerShell Script
-+
-+This directory contains a PowerShell script (`Set-WindowsTheme.ps1`) to programmatically change the Windows 11 theme between light and dark modes.
-+
-+## Features
-+
-+- Sets both application and system themes.
-+- Option to automatically restart Windows Explorer to apply system theme changes immediately.
-+- Simple command-line interface.
-+- Includes comment-based help for easy understanding and usage.
-+
-+## Script: `Set-WindowsTheme.ps1`
-+
-+This script modifies registry entries under `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize` to switch between light and dark themes.
-+
-+### Parameters
-+
-+-   `Mode` (string):
-+    -   Specifies the theme to set.
-+    -   Accepted values: `"dark"`, `"light"`.
-+    -   Default: `"dark"`.
-+-   `RestartExplorer` (boolean):
-+    -   If `$true`, Windows Explorer will be restarted after the theme is set. This ensures that changes to the system UI (taskbar, Start Menu, etc.) are applied immediately.
-+    -   Default: `$false`.
-+
-+### How to Use
-+
-+1.  Open PowerShell.
-+2.  Navigate to the directory containing the script (e.g., `cd C:\Code\Windows\DarkTheme`).
-+3.  Run the script with desired parameters. You can also get help for the script:
-+    ```powershell
-+    Get-Help .\Set-WindowsTheme.ps1 -Full
-+    ```
-+
-+**Examples:**
-+
-+*   **Set to Dark Mode (default behavior):**
-+    ```powershell
-+    .\Set-WindowsTheme.ps1
-+    ```
-+    or explicitly:
-+    ```powershell
-+    .\Set-WindowsTheme.ps1 -Mode dark
-+    ```
-+
-+*   **Set to Light Mode and automatically restart Explorer:**
-+    ```powershell
-+    .\Set-WindowsTheme.ps1 -Mode light -RestartExplorer $true
-+    ```
-+
-+*   **Set to Light Mode without restarting Explorer:**
-+    ```powershell
-+    .\Set-WindowsTheme.ps1 -Mode light
-+    # or
-+    .\Set-WindowsTheme.ps1 -Mode light -RestartExplorer $false
-+    ```
-+
-+### Notes
-+
-+-   The script modifies user-specific theme settings and generally does not require administrative privileges.
-+-   If you choose not to use the `-RestartExplorer $true` parameter (or if it's omitted, as it defaults to `$false`), you might need to manually restart Windows Explorer (e.g., via Task Manager) or sign out and back in for all system theme changes (like the taskbar and Start Menu) to take full effect. 
-\ No newline at end of file
-diff --git a/DarkTheme/Set-WindowsTheme.ps1 b/DarkTheme/Set-WindowsTheme.ps1
-new file mode 100644
-index 0000000..edf20de
---- /dev/null
-+++ b/DarkTheme/Set-WindowsTheme.ps1
-@@ -0,0 +1,86 @@
-+<#
-+.SYNOPSIS
-+    Toggles the Windows theme between light and dark mode.
-+.DESCRIPTION
-+    This script modifies the necessary registry settings to switch the Windows
-+    system and application themes to either light or dark mode.
-+    It also provides an option to restart Windows Explorer to apply system-wide
-+    changes immediately.
-+.PARAMETER Mode
-+    Specifies the desired theme mode. Accepted values are "dark" or "light".
-+    Defaults to "dark".
-+.PARAMETER RestartExplorer
-+    If set to $true, Windows Explorer will be restarted after applying the theme
-+    to ensure system-wide changes (like taskbar and Start menu) are immediately visible.
-+    Defaults to $false.
-+.EXAMPLE
-+    .\Set-WindowsTheme.ps1 -Mode dark
-+    Sets the Windows theme to dark mode. Explorer will not be restarted automatically.
-+.EXAMPLE
-+    .\Set-WindowsTheme.ps1 -Mode light -RestartExplorer $true
-+    Sets the Windows theme to light mode and restarts Windows Explorer.
-+.NOTES
-+    Author: Gemini
-+    This script directly modifies user-level registry settings.
-+#>
-+param(
-+    [Parameter(Mandatory=$false)]
-+    [ValidateSet("dark", "light")]
-+    [string]$Mode = "dark", # Default to dark mode if no mode is specified
-+
-+    [Parameter(Mandatory=$false)]
-+    [bool]$RestartExplorer = $false # Default to not restarting Explorer
-+)
-+
-+#region Initialization
-+# Define the registry path for theme settings
-+$RegistryPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-+
-+# Define the registry value names
-+$AppsThemeValueName = "AppsUseLightTheme"
-+$SystemThemeValueName = "SystemUsesLightTheme"
-+
-+# Determine the value to set based on the chosen mode
-+# A value of 0 corresponds to dark mode, and 1 to light mode.
-+$ThemeValueToSet = if ($Mode -eq "dark") { 0 } else { 1 }
-+#endregion Initialization
-+
-+#region Logic
-+try {
-+    # Inform the user about the action being taken
-+    Write-Host "Attempting to set Windows theme to $($Mode.ToUpper()) mode..."
-+
-+    # Set the application theme
-+    # This registry key controls the theme for applications that support light/dark mode.
-+    Set-ItemProperty -Path $RegistryPath -Name $AppsThemeValueName -Value $ThemeValueToSet -ErrorAction Stop
-+    Write-Host "- Application theme set to $Mode mode."
-+
-+    # Set the system theme
-+    # This registry key controls the theme for system elements like the Taskbar, Start Menu, and Action Center.
-+    Set-ItemProperty -Path $RegistryPath -Name $SystemThemeValueName -Value $ThemeValueToSet -ErrorAction Stop
-+    Write-Host "- System theme set to $Mode mode."
-+
-+    # Check if the user wants to restart Explorer
-+    if ($RestartExplorer) {
-+        Write-Host "Restarting Windows Explorer to apply system theme changes immediately..."
-+        # Stop the Explorer process. -Force is used to ensure it closes.
-+        # -ErrorAction SilentlyContinue is used in case Explorer is not running or has multiple instances,
-+        # though typically there is one main shell process.
-+        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-+        
-+        # Start the Explorer process. This will reload the shell (taskbar, desktop icons, etc.)
-+        Start-Process explorer -ErrorAction Stop
-+        Write-Host "Windows Explorer restarted successfully."
-+    } else {
-+        Write-Host "Note: System-wide theme changes (e.g., Taskbar) may require a Windows Explorer restart or a sign-out/sign-in to fully apply."
-+    }
-+
-+    Write-Host "Windows theme successfully set to $Mode mode."
-+}
-+catch {
-+    # Error handling block
-+    # This will catch any terminating errors from the Set-ItemProperty or Start-Process cmdlets.
-+    Write-Error "An error occurred while attempting to set the theme: $($_.Exception.Message)"
-+    Write-Error "Please ensure you have the necessary permissions and that the registry path is correct."
-+}
-+#endregion Logic 
-\ No newline at end of file
-diff --git a/SetupLabCore.psm1 b/SetupLabCore.psm1
-new file mode 100644
-index 0000000..3069291
---- /dev/null
-+++ b/SetupLabCore.psm1
-@@ -0,0 +1,700 @@
-+#Requires -Version 5.1
-+<#
-+.SYNOPSIS
-+    Core module for SetupLab containing shared functions and utilities
-+.DESCRIPTION
-+    This module provides common functionality for all installer scripts including:
-+    - Admin elevation
-+    - Logging
-+    - Download management
-+    - Software validation
-+    - Parallel execution support
-+#>
-+
-+#region Module Variables
-+$script:LogPath = Join-Path $PSScriptRoot "Logs"
-+$script:TempPath = Join-Path $env:TEMP "SetupLab"
-+$script:ConfigPath = Join-Path $PSScriptRoot "software-config.json"
-+
-+if (-not (Test-Path $script:LogPath)) {
-+    New-Item -ItemType Directory -Path $script:LogPath -Force | Out-Null
-+}
-+if (-not (Test-Path $script:TempPath)) {
-+    New-Item -ItemType Directory -Path $script:TempPath -Force | Out-Null
-+}
-+#endregion
-+
-+#region Logging Functions
-+function Write-SetupLog {
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $true)]
-+        [string]$Message,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [ValidateSet('Info', 'Success', 'Warning', 'Error', 'Debug')]
-+        [string]$Level = 'Info',
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$LogFile = "SetupLab_$((Get-Date).ToString('yyyyMMdd')).log"
++++ b/Examples/webscript/Install-GitFromWeb.ps1
+@@ -0,0 +1,36 @@
++function Install-GitFromWeb {
++    param (
++        [string]$url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"
 +    )
-+    
-+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-+    $logMessage = "[$timestamp] [$Level] $Message"
-+    $logFilePath = Join-Path $script:LogPath $LogFile
-+    
-+    # Write to log file
-+    Add-Content -Path $logFilePath -Value $logMessage -Force
-+    
-+    # Write to console with color
-+    $color = switch ($Level) {
-+        'Success' { 'Green' }
-+        'Warning' { 'Yellow' }
-+        'Error'   { 'Red' }
-+        'Debug'   { 'Gray' }
-+        default   { 'White' }
-+    }
-+    
-+    Write-Host $logMessage -ForegroundColor $color
-+}
-+#endregion
 +
-+#region Admin Functions
-+function Test-AdminPrivileges {
-+    <#
-+    .SYNOPSIS
-+        Tests if the current session has administrator privileges
-+    .DESCRIPTION
-+        Checks if the current PowerShell session is running with elevated permissions
-+    .OUTPUTS
-+        Boolean indicating admin status
-+    #>
-+    [CmdletBinding()]
-+    param()
-+    
-+    $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
-+    $principal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
-+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-+}
++    Write-EnhancedLog -Message "Attempting to install Git from URL: $url" -Level "INFO"
 +
-+function Request-AdminElevation {
-+    <#
-+    .SYNOPSIS
-+        Requests administrator elevation for the current script
-+    .DESCRIPTION
-+        Re-launches the current script with administrator privileges if not already elevated
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $false)]
-+        [string]$ScriptPath = $PSCommandPath,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [hashtable]$Parameters = @{}
-+    )
-+    
-+    if (-not (Test-AdminPrivileges)) {
-+        Write-SetupLog "Requesting administrator elevation..." -Level Warning
-+        
-+        $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$ScriptPath`"")
-+        
-+        foreach ($key in $Parameters.Keys) {
-+            $argList += "-$key"
-+            if ($Parameters[$key] -ne $true) {
-+                $argList += "`"$($Parameters[$key])`""
-+            }
-+        }
-+        
-+        Start-Process PowerShell.exe -Verb RunAs -ArgumentList $argList
-+        exit
-+    }
-+}
-+#endregion
++    $process = Invoke-WebScript -url $url
++    if ($process) {
++        $process.WaitForExit()
 +
-+#region Download Functions
-+function Start-SetupDownload {
-+    <#
-+    .SYNOPSIS
-+        Downloads a file with retry logic using BITS or WebClient
-+    .DESCRIPTION
-+        Attempts to download a file using BITS with fallback to WebClient
-+    .PARAMETER Url
-+        The URL of the file to download
-+    .PARAMETER Destination
-+        The local path where the file should be saved
-+    .PARAMETER MaxRetries
-+        Maximum number of retry attempts (default: 3)
-+    .PARAMETER RetryDelay
-+        Delay in seconds between retries (default: 5)
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $true)]
-+        [string]$Url,
-+        
-+        [Parameter(Mandatory = $true)]
-+        [string]$Destination,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [int]$MaxRetries = 3,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [int]$RetryDelay = 5
-+    )
-+    
-+    $attempt = 0
-+    $success = $false
-+    
-+    while ($attempt -lt $MaxRetries -and -not $success) {
-+        $attempt++
-+        
-+        try {
-+            Write-SetupLog "Download attempt $attempt of $MaxRetries for: $Url" -Level Info
-+            
-+            # Try BITS first
-+            if (Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue) {
-+                Start-BitsTransfer -Source $Url -Destination $Destination -ErrorAction Stop
-+                $success = $true
-+                Write-SetupLog "Download completed using BITS" -Level Success
-+            }
-+            else {
-+                throw "BITS not available, falling back to WebClient"
-+            }
++        # Perform post-installation validation
++        $validationParams = @{
++            SoftwareName        = "Git"
++            MinVersion          = [version]"2.46.0"
++            RegistryPath        = "HKLM:\SOFTWARE\GitForWindows"
++            ExePath             = "C:\Program Files\Git\bin\git.exe"
++            MaxRetries          = 3  # Single retry after installation
++            DelayBetweenRetries = 5
 +        }
-+        catch {
-+            Write-SetupLog "BITS download failed: $_" -Level Warning
-+            
-+            try {
-+                # Fallback to WebClient
-+                $webClient = New-Object System.Net.WebClient
-+                $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-+                $webClient.DownloadFile($Url, $Destination)
-+                $success = $true
-+                Write-SetupLog "Download completed using WebClient" -Level Success
-+            }
-+            catch {
-+                Write-SetupLog "WebClient download failed: $_" -Level Error
-+                
-+                if ($attempt -lt $MaxRetries) {
-+                    Write-SetupLog "Retrying in $RetryDelay seconds..." -Level Warning
-+                    Start-Sleep -Seconds $RetryDelay
-+                }
-+            }
-+        }
-+    }
-+    
-+    if (-not $success) {
-+        throw "Failed to download file after $MaxRetries attempts"
-+    }
-+    
-+    return $Destination
-+}
-+#endregion
 +
-+#region Validation Functions
-+function Test-SoftwareInstalled {
-+    <#
-+    .SYNOPSIS
-+        Checks if software is installed on the system
-+    .DESCRIPTION
-+        Searches registry and common installation paths for software
-+    .PARAMETER Name
-+        The name of the software to check
-+    .PARAMETER RegistryName
-+        Optional specific registry name to search for
-+    .PARAMETER ExecutablePath
-+        Optional specific executable path to check
-+    .PARAMETER MinimumVersion
-+        Optional minimum version requirement
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $true)]
-+        [string]$Name,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$RegistryName,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$ExecutablePath,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [version]$MinimumVersion
-+    )
-+    
-+    # Check executable path first if provided
-+    if ($ExecutablePath -and (Test-Path $ExecutablePath)) {
-+        if ($MinimumVersion) {
-+            try {
-+                $versionInfo = (Get-Item $ExecutablePath).VersionInfo
-+                $currentVersion = [version]($versionInfo.ProductVersion -replace '[^\d\.]', '')
-+                
-+                if ($currentVersion -ge $MinimumVersion) {
-+                    Write-SetupLog "$Name version $currentVersion found (meets minimum $MinimumVersion)" -Level Success
-+                    return $true
-+                }
-+                else {
-+                    Write-SetupLog "$Name version $currentVersion found but below minimum $MinimumVersion" -Level Warning
-+                    return $false
-+                }
-+            }
-+            catch {
-+                Write-SetupLog "Could not determine version for $Name" -Level Warning
-+            }
-+        }
-+        else {
-+            Write-SetupLog "$Name found at: $ExecutablePath" -Level Success
++        $postValidationResult = Validate-SoftwareInstallation @validationParams
++        if ($postValidationResult.IsInstalled -and $postValidationResult.Version -ge $validationParams.MinVersion) {
++            Write-EnhancedLog -Message "Git successfully installed and validated." -Level "INFO"
 +            return $true
 +        }
-+    }
-+    
-+    # Check registry
-+    $searchName = if ($RegistryName) { $RegistryName } else { $Name }
-+    
-+    $registryPaths = @(
-+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
-+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
-+    )
-+    
-+    foreach ($path in $registryPaths) {
-+        $installed = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-+            Where-Object { $_.DisplayName -like "*$searchName*" }
-+        
-+        if ($installed) {
-+            if ($MinimumVersion -and $installed.DisplayVersion) {
-+                try {
-+                    $currentVersion = [version]($installed.DisplayVersion -replace '[^\d\.]', '')
-+                    
-+                    if ($currentVersion -ge $MinimumVersion) {
-+                        Write-SetupLog "$Name version $currentVersion found in registry (meets minimum $MinimumVersion)" -Level Success
-+                        return $true
-+                    }
-+                    else {
-+                        Write-SetupLog "$Name version $currentVersion found but below minimum $MinimumVersion" -Level Warning
-+                        return $false
-+                    }
-+                }
-+                catch {
-+                    Write-SetupLog "Could not parse version for $Name" -Level Warning
-+                }
-+            }
-+            else {
-+                Write-SetupLog "$Name found in registry" -Level Success
-+                return $true
-+            }
++        else {
++            Write-EnhancedLog -Message "Git installation validation failed." -Level "ERROR"
++            return $false
 +        }
 +    }
-+    
-+    Write-SetupLog "$Name not found on system" -Level Info
-+    return $false
++    else {
++        Write-EnhancedLog -Message "Failed to start the installation process for Git." -Level "ERROR"
++        return $false
++    }
 +}
+\ No newline at end of file
+diff --git a/Examples/webscript/Install-PowerShell7FromWeb.ps1 b/Examples/webscript/Install-PowerShell7FromWeb.ps1
+new file mode 100644
+index 0000000..2449419
+--- /dev/null
++++ b/Examples/webscript/Install-PowerShell7FromWeb.ps1
+@@ -0,0 +1,37 @@
 +
-+function Get-InstalledSoftwareVersion {
-+    <#
-+    .SYNOPSIS
-+        Gets the installed version of a software
-+    .DESCRIPTION
-+        Retrieves version information from registry or executable
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $true)]
-+        [string]$Name,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$RegistryName,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$ExecutablePath
++function Install-PowerShell7FromWeb {
++    param (
++        [string]$url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"
 +    )
-+    
-+    # Check executable first
-+    if ($ExecutablePath -and (Test-Path $ExecutablePath)) {
-+        try {
-+            $versionInfo = (Get-Item $ExecutablePath).VersionInfo
-+            return [version]($versionInfo.ProductVersion -replace '[^\d\.]', '')
++
++    Write-EnhancedLog -Message "Attempting to install PowerShell 7 from URL: $url" -Level "INFO"
++
++    $process = Invoke-WebScript -url $url
++    if ($process) {
++        $process.WaitForExit()
++
++        # Perform post-installation validation
++        $validationParams = @{
++            SoftwareName        = "PowerShell"
++            MinVersion          = [version]"7.4.4"
++            RegistryPath        = "HKLM:\SOFTWARE\Microsoft\PowerShellCore"
++            ExePath             = "C:\Program Files\PowerShell\7\pwsh.exe"
++            MaxRetries          = 3  # Single retry after installation
++            DelayBetweenRetries = 5
 +        }
-+        catch {
-+            Write-SetupLog "Could not get version from executable" -Level Debug
++
++        $postValidationResult = Validate-SoftwareInstallation @validationParams
++        if ($postValidationResult.IsInstalled -and $postValidationResult.Version -ge $validationParams.MinVersion) {
++            Write-EnhancedLog -Message "PowerShell 7 successfully installed and validated." -Level "INFO"
++            return $true
++        }
++        else {
++            Write-EnhancedLog -Message "PowerShell 7 installation validation failed." -Level "ERROR"
++            return $false
 +        }
 +    }
-+    
-+    # Check registry
-+    $searchName = if ($RegistryName) { $RegistryName } else { $Name }
-+    
-+    $registryPaths = @(
-+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
-+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
-+    )
-+    
-+    foreach ($path in $registryPaths) {
-+        $installed = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-+            Where-Object { $_.DisplayName -like "*$searchName*" } |
-+            Select-Object -First 1
-+        
-+        if ($installed -and $installed.DisplayVersion) {
-+            try {
-+                return [version]($installed.DisplayVersion -replace '[^\d\.]', '')
-+            }
-+            catch {
-+                Write-SetupLog "Could not parse version from registry" -Level Debug
-+            }
-+        }
++    else {
++        Write-EnhancedLog -Message "Failed to start the installation process for PowerShell 7." -Level "ERROR"
++        return $false
 +    }
-+    
-+    return $null
 +}
-+#endregion
+\ No newline at end of file
+diff --git a/Examples/webscript/Invoke-WebScript.ps1 b/Examples/webscript/Invoke-WebScript.ps1
+new file mode 100644
+index 0000000..69debfc
+--- /dev/null
++++ b/Examples/webscript/Invoke-WebScript.ps1
+@@ -0,0 +1,34 @@
 +
-+#region Installation Functions
-+function Invoke-SetupInstaller {
-+    <#
-+    .SYNOPSIS
-+        Executes an installer with appropriate parameters
-+    .DESCRIPTION
-+        Runs an installer executable with silent/quiet parameters
-+    .PARAMETER InstallerPath
-+        Path to the installer executable
-+    .PARAMETER Arguments
-+        Arguments to pass to the installer
-+    .PARAMETER InstallType
-+        Type of installer (MSI, EXE, MSIX, NPM)
-+    .PARAMETER NpmPackage
-+        NPM package name (for NPM install type)
-+    .PARAMETER NpmInstallArgs
-+        Additional arguments for npm install
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $false)]
-+        [string]$InstallerPath,
++function Invoke-WebScript {
++    param (
++        [string]$url
++    )
++
++    $powerShellPath = Get-PowerShellPath -ForcePowerShell5
++
++    Write-EnhancedLog -Message "Validating URL: $url" -Level "INFO"
++
++    if (Test-Url -url $url) {
++        Write-EnhancedLog -Message "Running script from URL: $url" -Level "INFO"
++
++        $startProcessParams = @{
++            FilePath     = $powerShellPath
++            ArgumentList = @(
++                "-NoExit",
++                "-NoProfile",
++                "-ExecutionPolicy", "Bypass",
++                "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')"
++            )
++            Verb         = "RunAs"
++            PassThru     = $true
++        }
 +        
-+        [Parameter(Mandatory = $false)]
-+        [string[]]$Arguments = @(),
++        $process = Start-Process @startProcessParams
 +        
-+        [Parameter(Mandatory = $false)]
-+        [ValidateSet('MSI', 'EXE', 'MSIX', 'NPM', 'Auto')]
-+        [string]$InstallType = 'Auto',
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string]$NpmPackage,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [string[]]$NpmInstallArgs = @()
++        return $process
++    }
++    else {
++        Write-EnhancedLog -Message "URL $url is not accessible" -Level "ERROR"
++        return $null
++    }
++}
+\ No newline at end of file
+diff --git a/Examples/webscript/PowerShell Script Execution from URLs Guide.md b/Examples/webscript/PowerShell Script Execution from URLs Guide.md
+new file mode 100644
+index 0000000..08885d2
+--- /dev/null
++++ b/Examples/webscript/PowerShell Script Execution from URLs Guide.md	
+@@ -0,0 +1,165 @@
++# PowerShell Script Execution from URLs Guide
++
++This guide explains different methods of executing PowerShell scripts from URLs, with a focus on security implications and best practices.
++
++## Table of Contents
++
++- [PowerShell Script Execution from URLs Guide](#powershell-script-execution-from-urls-guide)
++  - [Table of Contents](#table-of-contents)
++  - [Example Script](#example-script)
++  - [Method 1: Direct Memory Execution (Invoke-Expression)](#method-1-direct-memory-execution-invoke-expression)
++    - [Characteristics of Memory Execution](#characteristics-of-memory-execution)
++  - [Method 2: Download and Execute (Safer Approach)](#method-2-download-and-execute-safer-approach)
++    - [Characteristics of Download Method](#characteristics-of-download-method)
++  - [Method 3: Using Invoke-WebRequest with Direct Execution](#method-3-using-invoke-webrequest-with-direct-execution)
++    - [Characteristics of Invoke-WebRequest](#characteristics-of-invoke-webrequest)
++  - [Security Considerations](#security-considerations)
++    - [When Using Raw GitHub URLs](#when-using-raw-github-urls)
++    - [General Security Best Practices](#general-security-best-practices)
++  - [Execution Policy Notes](#execution-policy-notes)
++  - [Troubleshooting Tips](#troubleshooting-tips)
++    - [Common Issues](#common-issues)
++  - [Example Usage for Our Script](#example-usage-for-our-script)
++    - [Memory-Only Execution](#memory-only-execution)
++    - [Download and Verify](#download-and-verify)
++  - [Additional Resources](#additional-resources)
++
++## Example Script
++
++Our example uses a network configuration script located at:
++
++```powershell
++https://raw.githubusercontent.com/aollivierre/HyperV/refs/heads/main/2-Create-HyperV_VM/Latest/Prepare%20Server%20Core%20Domain%20Controller/1-Set-Static-IPV4-from-DHCP-Configs.ps1
++```
++
++## Method 1: Direct Memory Execution (Invoke-Expression)
++
++```powershell
++Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('YOUR_SCRIPT_URL'))
++```
++
++### Characteristics of Memory Execution
++
++- Script runs directly in memory
++- No file is saved to disk
++- Faster execution
++- Harder to inspect before execution
++- Memory-only footprint
++- Good for one-time execution
++- Less secure as script content can't be easily verified before execution
++
++## Method 2: Download and Execute (Safer Approach)
++
++```powershell
++$scriptUrl = 'YOUR_SCRIPT_URL'
++$outputPath = "$env:TEMP\Script.ps1"
++Invoke-WebRequest -Uri $scriptUrl -OutFile $outputPath
++Get-Content $outputPath | Write-Host
++Read-Host "Press Enter to execute the script"
++Set-ExecutionPolicy Bypass -Scope Process -Force
++& $outputPath
++```
++
++### Characteristics of Download Method
++
++- Script is downloaded to disk first
++- Can be inspected before execution
++- Creates a local copy for reference
++- More control over the execution process
++- Better for security auditing
++- Allows for script verification before execution
++- Required for scripts using `$PSScriptRoot` or similar automatic variables that depend on file paths
++- Better for scripts that need to reference their own location or relative paths
++
++## Method 3: Using Invoke-WebRequest with Direct Execution
++
++```powershell
++$scriptUrl = 'YOUR_SCRIPT_URL'
++Set-ExecutionPolicy Bypass -Scope Process -Force
++Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing | Select-Object -ExpandProperty Content | Invoke-Expression
++```
++
++### Characteristics of Invoke-WebRequest
++
++- Modern alternative to WebClient
++- Better handling of special characters in URLs
++- Supports more authentication methods
++- More features like progress tracking
++- Still runs in memory
++- More robust error handling
++
++## Security Considerations
++
++### When Using Raw GitHub URLs
++
++1. Always use the `raw.githubusercontent.com` domain
++2. Ensure you're using the correct branch (e.g., `main`, `master`)
++3. URL format should be: `https://raw.githubusercontent.com/USER/REPO/BRANCH/PATH/TO/SCRIPT`
++
++### General Security Best Practices
++
++1. **Always verify the source** of the script
++2. Use **HTTPS** URLs only
++3. Consider using **script signing** for production environments
++4. Implement **hash verification** for critical scripts
++5. Use `-UseBasicParsing` with `Invoke-WebRequest` for better compatibility
++6. Consider using `-ExecutionPolicy` scoped to `Process` only
++7. Avoid storing credentials in scripts
++8. Review scripts before execution when possible
++
++## Execution Policy Notes
++
++```powershell
++# Temporary bypass for current process only
++Set-ExecutionPolicy Bypass -Scope Process -Force
++
++# More restrictive alternatives
++Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
++Set-ExecutionPolicy AllSigned -Scope CurrentUser
++```
++
++## Troubleshooting Tips
++
++### Common Issues
++
++1. **SSL/TLS Errors**: Ensure you're using TLS 1.2 or higher
++
++   ```powershell
++   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
++   ```
++
++2. **URL Encoding Issues**: Use `[System.Web.HttpUtility]::UrlEncode()` for complex URLs
++
++3. **Proxy Considerations**: Use `-Proxy` parameter with `Invoke-WebRequest` if needed
++
++4. **Timeout Issues**: Adjust timeout settings for large scripts
++
++   ```powershell
++   $webClient.Timeout = 30000  # 30 seconds
++   ```
++
++## Example Usage for Our Script
++
++### Memory-Only Execution
++
++```powershell
++Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/aollivierre/HyperV/refs/heads/main/2-Create-HyperV_VM/Latest/Prepare%20Server%20Core%20Domain%20Controller/1-Set-Static-IPV4-from-DHCP-Configs.ps1'))
++```
++
++### Download and Verify
++
++```powershell
++$scriptUrl = 'https://raw.githubusercontent.com/aollivierre/HyperV/refs/heads/main/2-Create-HyperV_VM/Latest/Prepare%20Server%20Core%20Domain%20Controller/1-Set-Static-IPV4-from-DHCP-Configs.ps1'
++$outputPath = "$env:TEMP\Set-Static-IPV4.ps1"
++Invoke-WebRequest -Uri $scriptUrl -OutFile $outputPath
++Get-Content $outputPath | Write-Host
++Read-Host "Press Enter to execute the script"
++Set-ExecutionPolicy Bypass -Scope Process -Force
++& $outputPath
++```
++
++## Additional Resources
++
++- [PowerShell Security Documentation](https://docs.microsoft.com/en-us/powershell/scripting/learn/security-features)
++- [About Execution Policies](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies)
++- [Invoke-WebRequest Documentation](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-webrequest)
+diff --git a/Examples/webscript/check.ps1 b/Examples/webscript/check.ps1
+new file mode 100644
+index 0000000..782e5af
+--- /dev/null
++++ b/Examples/webscript/check.ps1
+@@ -0,0 +1,753 @@
++#Unique Tracking ID: 0fe95769-ac53-49ef-9c81-3e73bfd8545d, Timestamp: 2024-06-09 12:07:36
++# JSON string
++$json = @'
++{
++  "PackageName": "PR4B - Install Pending Windows Updates",
++  "PackageUniqueGUID": "f19844c1-d77a-4d59-883f-8fec027a3458",
++  "Version": 1,
++  "PackageExecutionContext": "SYSTEM",
++  "LoggingDeploymentName": "PR4B_TriggerWindowsUpdatesCustomlog",
++  "ScriptMode": "Remediation",
++  "RunOnDemand": false,
++  "UsePSADT": false,
++  "TriggerType": "Daily",
++  "LogonUserId": "administrator",
++  "RepetitionInterval": "P1D"
++}
++'@
++
++# Convert JSON string to a PowerShell object
++$Config = $json | ConvertFrom-Json
++
++# Assign values from JSON to variables
++$PackageName = $config.PackageName
++$PackageUniqueGUID = $config.PackageUniqueGUID
++$Version = $config.Version
++$PackageExecutionContext = $config.PackageExecutionContext
++# $RepetitionInterval = $config.RepetitionInterval
++$ScriptMode = $config.ScriptMode
++
++# Assign values from JSON to variables
++$LoggingDeploymentName = $config.LoggingDeploymentName
++    
++function Initialize-ScriptAndLogging {
++    $ErrorActionPreference = 'SilentlyContinue'
++    $deploymentName = "$LoggingDeploymentName" # Replace this with your actual deployment name
++    $scriptPath = "C:\code\$deploymentName"
++    # $hadError = $false
++    
++    try {
++        if (-not (Test-Path -Path $scriptPath)) {
++            New-Item -ItemType Directory -Path $scriptPath -Force | Out-Null
++            Write-Host "Created directory: $scriptPath"
++        }
++    
++        $computerName = $env:COMPUTERNAME
++        $Filename = "$LoggingDeploymentName"
++        $logDir = Join-Path -Path $scriptPath -ChildPath "exports\Logs\$computerName"
++        $logPath = Join-Path -Path $logDir -ChildPath "$(Get-Date -Format 'yyyy-MM-dd-HH-mm-ss')"
++            
++        if (!(Test-Path $logPath)) {
++            Write-Host "Did not find log file at $logPath" -ForegroundColor Yellow
++            Write-Host "Creating log file at $logPath" -ForegroundColor Yellow
++            $createdLogDir = New-Item -ItemType Directory -Path $logPath -Force -ErrorAction Stop
++            Write-Host "Created log file at $logPath" -ForegroundColor Green
++        }
++            
++        $logFile = Join-Path -Path $logPath -ChildPath "$Filename-Transcript.log"
++        Start-Transcript -Path $logFile -ErrorAction Stop | Out-Null
++    
++        $CSVDir = Join-Path -Path $scriptPath -ChildPath "exports\CSV"
++        $CSVFilePath = Join-Path -Path $CSVDir -ChildPath "$computerName"
++            
++        if (!(Test-Path $CSVFilePath)) {
++            Write-Host "Did not find CSV file at $CSVFilePath" -ForegroundColor Yellow
++            Write-Host "Creating CSV file at $CSVFilePath" -ForegroundColor Yellow
++            $createdCSVDir = New-Item -ItemType Directory -Path $CSVFilePath -Force -ErrorAction Stop
++            Write-Host "Created CSV file at $CSVFilePath" -ForegroundColor Green
++        }
++    
++        return @{
++            ScriptPath  = $scriptPath
++            Filename    = $Filename
++            LogPath     = $logPath
++            LogFile     = $logFile
++            CSVFilePath = $CSVFilePath
++        }
++    
++    }
++    catch {
++        Write-Error "An error occurred while initializing script and logging: $_"
++    }
++}
++$initializationInfo = Initialize-ScriptAndLogging
++    
++    
++    
++# Script Execution and Variable Assignment
++# After the function Initialize-ScriptAndLogging is called, its return values (in the form of a hashtable) are stored in the variable $initializationInfo.
++    
++# Then, individual elements of this hashtable are extracted into separate variables for ease of use:
++    
++# $ScriptPath: The path of the script's main directory.
++# $Filename: The base name used for log files.
++# $logPath: The full path of the directory where logs are stored.
++# $logFile: The full path of the transcript log file.
++# $CSVFilePath: The path of the directory where CSV files are stored.
++# This structure allows the script to have a clear organization regarding where logs and other files are stored, making it easier to manage and maintain, especially for logging purposes. It also encapsulates the setup logic in a function, making the main script cleaner and more focused on its primary tasks.
++    
++    
++$ScriptPath = $initializationInfo['ScriptPath']
++$Filename = $initializationInfo['Filename']
++$logPath = $initializationInfo['LogPath']
++$logFile = $initializationInfo['LogFile']
++$CSVFilePath = $initializationInfo['CSVFilePath']
++    
++    
++    
++    
++function AppendCSVLog {
++    param (
++        [string]$Message,
++        [string]$CSVFilePath
++           
 +    )
 +    
-+    if ($InstallType -eq 'NPM') {
-+        # Handle NPM package installation
-+        if (-not $NpmPackage) {
-+            throw "NPM package name is required for NPM install type"
-+        }
-+        
-+        Write-SetupLog "Installing NPM package: $NpmPackage" -Level Info
-+        
-+        # Check if npm is available
-+        $npmPath = Get-Command npm -ErrorAction SilentlyContinue
-+        if (-not $npmPath) {
-+            throw "npm is not available. Please install Node.js first."
-+        }
-+        
-+        # Build npm install command
-+        $npmArgs = @("install", "-g", $NpmPackage) + $NpmInstallArgs
-+        
-+        Write-SetupLog "Running: npm $($npmArgs -join ' ')" -Level Debug
-+        
-+        $process = Start-Process -FilePath "npm" -ArgumentList $npmArgs -Wait -PassThru -NoNewWindow
-+        
-+        if ($process.ExitCode -ne 0) {
-+            throw "NPM installation failed with exit code: $($process.ExitCode)"
-+        }
-+        
-+        Write-SetupLog "NPM package installed successfully" -Level Success
++    $csvData = [PSCustomObject]@{
++        TimeStamp    = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
++        ComputerName = $env:COMPUTERNAME
++        Message      = $Message
++    }
++    
++    $csvData | Export-Csv -Path $CSVFilePath -Append -NoTypeInformation -Force
++}
++    
++    
++    
++function CreateEventSourceAndLog {
++    param (
++        [string]$LogName,
++        [string]$EventSource
++    )
++    
++    
++    # Validate parameters
++    if (-not $LogName) {
++        Write-Warning "LogName is required."
++        return
++    }
++    if (-not $EventSource) {
++        Write-Warning "Source is required."
 +        return
 +    }
 +    
-+    if (-not (Test-Path $InstallerPath)) {
-+        throw "Installer not found: $InstallerPath"
-+    }
-+    
-+    # Determine install type if Auto
-+    if ($InstallType -eq 'Auto') {
-+        $extension = [System.IO.Path]::GetExtension($InstallerPath).ToLower()
-+        $InstallType = switch ($extension) {
-+            '.msi'  { 'MSI' }
-+            '.msix' { 'MSIX' }
-+            '.msixbundle' { 'MSIX' }
-+            default { 'EXE' }
-+        }
-+    }
-+    
-+    Write-SetupLog "Installing using $InstallType method" -Level Info
-+    
-+    switch ($InstallType) {
-+        'MSI' {
-+            $msiArgs = @("/i", "`"$InstallerPath`"") + $Arguments
-+            $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $msiArgs -Wait -PassThru
-+        }
-+        
-+        'MSIX' {
-+            Add-AppxPackage -Path $InstallerPath -ErrorAction Stop
-+            return
-+        }
-+        
-+        'EXE' {
-+            $process = Start-Process -FilePath $InstallerPath -ArgumentList $Arguments -Wait -PassThru
-+        }
-+    }
-+    
-+    if ($process.ExitCode -ne 0) {
-+        throw "Installation failed with exit code: $($process.ExitCode)"
-+    }
-+    
-+    Write-SetupLog "Installation completed successfully" -Level Success
-+}
-+#endregion
-+
-+#region Configuration Functions
-+function Get-SoftwareConfiguration {
-+    <#
-+    .SYNOPSIS
-+        Loads software configuration from JSON file
-+    .DESCRIPTION
-+        Reads and parses the software configuration file
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $false)]
-+        [string]$ConfigFile = $script:ConfigPath
-+    )
-+    
-+    if (-not (Test-Path $ConfigFile)) {
-+        throw "Configuration file not found: $ConfigFile"
-+    }
-+    
-+    try {
-+        $config = Get-Content -Path $ConfigFile -Raw | ConvertFrom-Json
-+        Write-SetupLog "Loaded configuration from: $ConfigFile" -Level Debug
-+        return $config
-+    }
-+    catch {
-+        throw "Failed to parse configuration file: $_"
-+    }
-+}
-+#endregion
-+
-+#region Parallel Execution Functions
-+function Start-ParallelInstallation {
-+    <#
-+    .SYNOPSIS
-+        Manages parallel installation of multiple software packages
-+    .DESCRIPTION
-+        Uses PowerShell jobs to install multiple packages simultaneously
-+    .PARAMETER Installations
-+        Array of installation configurations
-+    .PARAMETER MaxConcurrency
-+        Maximum number of concurrent installations (default: 4)
-+    #>
-+    [CmdletBinding()]
-+    param(
-+        [Parameter(Mandatory = $true)]
-+        [array]$Installations,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [int]$MaxConcurrency = 4,
-+        
-+        [Parameter(Mandatory = $false)]
-+        [switch]$SkipValidation
-+    )
-+    
-+    $jobs = @()
-+    $completed = @()
-+    $failed = @()
-+    $skipped = @()
-+    $running = @{}
-+    $pending = $Installations.Clone()
-+    
-+    Write-SetupLog "Starting parallel installation of $($Installations.Count) packages (max concurrency: $MaxConcurrency)" -Level Info
-+    
-+    while ($pending.Count -gt 0 -or $running.Count -gt 0) {
-+        # Start new jobs if under concurrency limit
-+        while ($running.Count -lt $MaxConcurrency -and $pending.Count -gt 0) {
-+            $installation = $pending[0]
-+            $pending = $pending[1..($pending.Count - 1)]
-+            
-+            # Skip if validation enabled and already installed
-+            if (-not $SkipValidation) {
-+                $validationParams = @{
-+                    Name = $installation.Name
-+                }
-+                
-+                if ($installation.RegistryName) {
-+                    $validationParams['RegistryName'] = $installation.RegistryName
-+                }
-+                
-+                if ($installation.ExecutablePath) {
-+                    $validationParams['ExecutablePath'] = $installation.ExecutablePath
-+                }
-+                
-+                if ($installation.MinimumVersion) {
-+                    $validationParams['MinimumVersion'] = $installation.MinimumVersion
-+                }
-+                
-+                if (Test-SoftwareInstalled @validationParams) {
-+                    Write-SetupLog "$($installation.Name) is already installed - skipping" -Level Info
-+                    $skipped += $installation
-+                    continue
-+                }
-+            }
-+            
-+            Write-SetupLog "Starting installation job for: $($installation.Name)" -Level Info
-+            
-+            $job = Start-Job -ScriptBlock {
-+                param($ModulePath, $Installation)
-+                
-+                Import-Module $ModulePath -Force
-+                
-+                try {
-+                    if ($Installation.InstallType -eq 'NPM') {
-+                        # Handle NPM package installation
-+                        $installerParams = @{
-+                            InstallType = 'NPM'
-+                            NpmPackage = $Installation.npmPackage
-+                        }
-+                        
-+                        if ($Installation.npmInstallArgs) {
-+                            $installerParams['NpmInstallArgs'] = $Installation.npmInstallArgs
-+                        }
-+                        
-+                        Invoke-SetupInstaller @installerParams
-+                        
-+                        # Run post-install command if provided
-+                        if ($Installation.postInstallCommand) {
-+                            Write-SetupLog "Running post-install command: $($Installation.postInstallCommand)" -Level Debug
-+                            Invoke-Expression $Installation.postInstallCommand
-+                        }
-+                    }
-+                    else {
-+                        # Download installer
-+                        $installerPath = Join-Path $env:TEMP "$($Installation.Name)_installer$($Installation.InstallerExtension)"
-+                        Start-SetupDownload -Url $Installation.DownloadUrl -Destination $installerPath
-+                        
-+                        # Run installer
-+                        Invoke-SetupInstaller -InstallerPath $installerPath -Arguments $Installation.InstallArguments -InstallType $Installation.InstallType
-+                    }
-+                    
-+                    # Validate installation (skip for NPM packages without validation params)
-+                    if ($Installation.InstallType -ne 'NPM' -or $Installation.RegistryName -or $Installation.ExecutablePath) {
-+                        $validationParams = @{
-+                            Name = $Installation.Name
-+                        }
-+                        
-+                        if ($Installation.RegistryName) {
-+                            $validationParams['RegistryName'] = $Installation.RegistryName
-+                        }
-+                        
-+                        if ($Installation.ExecutablePath) {
-+                            $validationParams['ExecutablePath'] = $Installation.ExecutablePath
-+                        }
-+                        
-+                        if ($Installation.MinimumVersion) {
-+                            $validationParams['MinimumVersion'] = $Installation.MinimumVersion
-+                        }
-+                        
-+                        if (Test-SoftwareInstalled @validationParams) {
-+                            return @{
-+                                Success = $true
-+                                Name = $Installation.Name
-+                                Message = "Installation completed successfully"
-+                            }
-+                        }
-+                        else {
-+                            throw "Post-installation validation failed"
-+                        }
-+                    }
-+                    else {
-+                        # For NPM packages without validation, assume success
-+                        return @{
-+                            Success = $true
-+                            Name = $Installation.Name
-+                            Message = "NPM package installed successfully"
-+                        }
-+                    }
-+                }
-+                catch {
-+                    return @{
-+                        Success = $false
-+                        Name = $Installation.Name
-+                        Message = $_.Exception.Message
-+                    }
-+                }
-+                finally {
-+                    # Cleanup
-+                    if ((Test-Path variable:installerPath) -and (Test-Path $installerPath)) {
-+                        Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
-+                    }
-+                }
-+            } -ArgumentList $PSScriptRoot, $installation
-+            
-+            $running[$job.Id] = @{
-+                Job = $job
-+                Installation = $installation
-+                StartTime = Get-Date
-+            }
-+        }
-+        
-+        # Check for completed jobs
-+        $completedJobs = $running.Values | Where-Object { $_.Job.State -ne 'Running' }
-+        
-+        foreach ($jobInfo in $completedJobs) {
-+            $result = Receive-Job -Job $jobInfo.Job
-+            Remove-Job -Job $jobInfo.Job
-+            
-+            $duration = ((Get-Date) - $jobInfo.StartTime).ToString("mm\:ss")
-+            
-+            if ($result.Success) {
-+                Write-SetupLog "$($result.Name) - $($result.Message) (Duration: $duration)" -Level Success
-+                $completed += $jobInfo.Installation
++    # Function to create event log and source
++    function CreateEventLogSource($logName, $EventSource) {
++        try {
++            if ($PSVersionTable.PSVersion.Major -lt 6) {
++                New-EventLog -LogName $logName -Source $EventSource
 +            }
 +            else {
-+                Write-SetupLog "$($result.Name) - Failed: $($result.Message) (Duration: $duration)" -Level Error
-+                $failed += $jobInfo.Installation
++                [System.Diagnostics.EventLog]::CreateEventSource($EventSource, $logName)
 +            }
-+            
-+            $running.Remove($jobInfo.Job.Id)
++            Write-Host "Event source '$EventSource' created in log '$logName'" -ForegroundColor Green
 +        }
-+        
-+        # Brief pause to prevent CPU spinning
-+        Start-Sleep -Milliseconds 500
++        catch {
++            Write-Warning "Error creating the event log. Make sure you run PowerShell as an Administrator."
++        }
 +    }
 +    
-+    # Summary
-+    Write-SetupLog ("=" * 60) -Level Info
-+    Write-SetupLog "Installation Summary:" -Level Info
-+    Write-SetupLog "  Completed: $($completed.Count)" -Level Success
-+    Write-SetupLog "  Failed: $($failed.Count)" -Level $(if ($failed.Count -gt 0) { 'Error' } else { 'Info' })
-+    Write-SetupLog "  Skipped: $($skipped.Count)" -Level Info
-+    Write-SetupLog ("=" * 60) -Level Info
-+    
-+    return @{
-+        Completed = $completed
-+        Failed = $failed
-+        Skipped = $skipped
++    # Check if the event log exists
++    if (-not (Get-WinEvent -ListLog $LogName -ErrorAction SilentlyContinue)) {
++        # CreateEventLogSource $LogName $EventSource
++    }
++    # Check if the event source exists
++    elseif (-not ([System.Diagnostics.EventLog]::SourceExists($EventSource))) {
++        # Unregister the source if it's registered with a different log
++        $existingLogName = (Get-WinEvent -ListLog * | Where-Object { $_.LogName -contains $EventSource }).LogName
++        if ($existingLogName -ne $LogName) {
++            Remove-EventLog -Source $EventSource -ErrorAction SilentlyContinue
++        }
++        # CreateEventLogSource $LogName $EventSource
++    }
++    else {
++        Write-Host "Event source '$EventSource' already exists in log '$LogName'" -ForegroundColor Yellow
 +    }
 +}
-+#endregion
++    
++$LogName = (Get-Date -Format "HHmmss") + "_$LoggingDeploymentName"
++$EventSource = (Get-Date -Format "HHmmss") + "_$LoggingDeploymentName"
++    
++# Call the Create-EventSourceAndLog function
++CreateEventSourceAndLog -LogName $LogName -EventSource $EventSource
++    
++# Call the Write-CustomEventLog function with custom parameters and level
++# Write-CustomEventLog -LogName $LogName -EventSource $EventSource -EventMessage "Outlook Signature Restore completed with warnings." -EventID 1001 -Level 'WARNING'
++    
++    
++    
++    
++# function Write-EventLogMessage {
++#     param (
++#         [Parameter(Mandatory = $true)]
++#         [ValidateNotNullOrEmpty()]
++#         [string]$Message,
++    
++#         [string]$LogName = "$LoggingDeploymentName",
++#         [string]$EventSource,
++    
++#         [int]$EventID = 1000  # Default event ID
++#     )
++    
++#     $ErrorActionPreference = 'SilentlyContinue'
++#     $hadError = $false
++    
++#     try {
++#         if (-not $EventSource) {
++#             throw "EventSource is required."
++#         }
++    
++#         if ($PSVersionTable.PSVersion.Major -lt 6) {
++#             # PowerShell version is less than 6, use Write-EventLog
++#             Write-EventLog -LogName $logName -Source $EventSource -EntryType Information -EventId $EventID -Message $Message
++#         }
++#         else {
++#             # PowerShell version is 6 or greater, use System.Diagnostics.EventLog
++#             $eventLog = New-Object System.Diagnostics.EventLog($logName)
++#             $eventLog.Source = $EventSource
++#             $eventLog.WriteEntry($Message, [System.Diagnostics.EventLogEntryType]::Information, $EventID)
++#         }
++    
++#         # Write-host "Event log entry created: $Message" 
++#     }
++#     catch {
++#         Write-Host "Error creating event log entry: $_" 
++#         $hadError = $true
++#     }
++    
++#     if (-not $hadError) {
++#         # Write-host "Event log message writing completed successfully."
++#     }
++# }
++    
++    
++    
++    
++function Write-EnhancedLog {
++    param (
++        [string]$Message,
++        [string]$Level = 'INFO',
++        [ConsoleColor]$ForegroundColor = [ConsoleColor]::White,
++        [string]$CSVFilePath = "$scriptPath\exports\CSV\$(Get-Date -Format 'yyyy-MM-dd')-Log.csv",
++        [string]$CentralCSVFilePath = "$scriptPath\exports\CSV\$Filename.csv",
++        [switch]$UseModule = $false,
++        [string]$Caller = (Get-PSCallStack)[0].Command
++    )
++    
++    # Add timestamp, computer name, and log level to the message
++    $formattedMessage = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $($env:COMPUTERNAME): [$Level] [$Caller] $Message"
++    
++    # Set foreground color based on log level
++    switch ($Level) {
++        'INFO' { $ForegroundColor = [ConsoleColor]::Green }
++        'WARNING' { $ForegroundColor = [ConsoleColor]::Yellow }
++        'ERROR' { $ForegroundColor = [ConsoleColor]::Red }
++    }
++    
++    # Write the message with the specified colors
++    $currentForegroundColor = $Host.UI.RawUI.ForegroundColor
++    $Host.UI.RawUI.ForegroundColor = $ForegroundColor
++    # Write-output $formattedMessage
++    Write-Host $formattedMessage
++    $Host.UI.RawUI.ForegroundColor = $currentForegroundColor
++    
++    # Append to CSV file
++    AppendCSVLog -Message $formattedMessage -CSVFilePath $CSVFilePath
++    AppendCSVLog -Message $formattedMessage -CSVFilePath $CentralCSVFilePath
++    
++    # Write to event log (optional)
++    # Write-CustomEventLog -EventMessage $formattedMessage -Level $Level
 +
-+#region Export Module Members
-+Export-ModuleMember -Function @(
-+    'Write-SetupLog',
-+    'Test-AdminPrivileges',
-+    'Request-AdminElevation',
-+    'Start-SetupDownload',
-+    'Test-SoftwareInstalled',
-+    'Get-InstalledSoftwareVersion',
-+    'Invoke-SetupInstaller',
-+    'Get-SoftwareConfiguration',
-+    'Start-ParallelInstallation'
-+)
-+#endregion
-\ No newline at end of file
-diff --git a/main.ps1 b/main.ps1
++    
++    # Adjust this line in your script where you call the function
++    # Write-EventLogMessage -LogName $LogName -EventSource $EventSource -Message $formattedMessage -EventID 1001
++    
++}
++    
++# function Export-EventLog {
++#     param (
++#         [Parameter(Mandatory = $true)]
++#         [string]$LogName,
++#         [Parameter(Mandatory = $true)]
++#         [string]$ExportPath
++#     )
++    
++#     try {
++#         wevtutil epl $LogName $ExportPath
++    
++#         if (Test-Path $ExportPath) {
++#             Write-EnhancedLog -Message "Event log '$LogName' exported to '$ExportPath'" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++#         }
++#         else {
++#             Write-EnhancedLog -Message "Event log '$LogName' not exported: File does not exist at '$ExportPath'" -Level "WARNING" -ForegroundColor ([ConsoleColor]::Yellow)
++#         }
++#     }
++#     catch {
++#         Write-EnhancedLog -Message "Error exporting event log '$LogName': $($_.Exception.Message)" -Level "ERROR" -ForegroundColor ([ConsoleColor]::Red)
++#     }
++# }
++    
++# # Example usage
++# $LogName = '$LoggingDeploymentNameLog'
++# # $ExportPath = 'Path\to\your\exported\eventlog.evtx'
++# $ExportPath = "C:\code\$LoggingDeploymentName\exports\Logs\$logname.evtx"
++# Export-EventLog -LogName $LogName -ExportPath $ExportPath
++    
++    
++    
++    
++    
++    
++#################################################################################################################################
++################################################# END LOGGING ###################################################################
++#################################################################################################################################
++    
++    
++    
++Write-EnhancedLog -Message "Logging works" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++
++#################################################################################################################################
++################################################# END LOGGING ###################################################################
++#################################################################################################################################
++    
++
++
++
++
++function Test-RunningAsSystem {
++    $systemSid = New-Object System.Security.Principal.SecurityIdentifier "S-1-5-18"
++    $currentSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
++
++    return $currentSid -eq $systemSid
++}
++
++
++function CheckAndElevate {
++
++    <#
++.SYNOPSIS
++Elevates the script to run with administrative privileges if not already running as an administrator.
++
++.DESCRIPTION
++The CheckAndElevate function checks if the current PowerShell session is running with administrative privileges. If it is not, the function attempts to restart the script with elevated privileges using the 'RunAs' verb. This is useful for scripts that require administrative privileges to perform their tasks.
++
++.EXAMPLE
++CheckAndElevate
++
++Checks the current session for administrative privileges and elevates if necessary.
++
++.NOTES
++This function will cause the script to exit and restart if it is not already running with administrative privileges. Ensure that any state or data required after elevation is managed appropriately.
++#>
++    [CmdletBinding()]
++    param (
++        # Advanced parameters could be added here if needed. For this function, parameters aren't strictly necessary,
++        # but you could, for example, add parameters to control logging behavior or to specify a different method of elevation.
++        # [switch]$Elevated
++    )
++
++    begin {
++        try {
++            $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
++            $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
++
++            Write-EnhancedLog -Message "Checking for administrative privileges..." -Level "INFO" -ForegroundColor ([ConsoleColor]::Blue)
++        }
++        catch {
++            Write-EnhancedLog -Message "Error determining administrative status: $_" -Level "ERROR" -ForegroundColor ([ConsoleColor]::Red)
++            throw $_
++        }
++    }
++
++    process {
++        if (-not $isAdmin) {
++            try {
++                Write-EnhancedLog -Message "The script is not running with administrative privileges. Attempting to elevate..." -Level "WARNING" -ForegroundColor ([ConsoleColor]::Yellow)
++                
++                $arguments = "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`" $args"
++                Start-Process PowerShell -Verb RunAs -ArgumentList $arguments
++
++                # Invoke-AsSystem -PsExec64Path $PsExec64Path
++                
++                Write-EnhancedLog -Message "Script re-launched with administrative privileges. Exiting current session." -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++                exit
++            }
++            catch {
++                Write-EnhancedLog -Message "Failed to elevate privileges: $_" -Level "ERROR" -ForegroundColor ([ConsoleColor]::Red)
++                throw $_
++            }
++        }
++        else {
++            Write-EnhancedLog -Message "Script is already running with administrative privileges." -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++        }
++    }
++
++    end {
++        # This block is typically used for cleanup. In this case, there's nothing to clean up,
++        # but it's useful to know about this structure for more complex functions.
++    }
++}
++
++
++
++function Remove-ExistingPsExec {
++    [CmdletBinding()]
++    param(
++        [string]$TargetFolder = "$PSScriptRoot\private"
++    )
++
++    # Full path for PsExec64.exe
++    $PsExec64Path = Join-Path -Path $TargetFolder -ChildPath "PsExec64.exe"
++
++    try {
++        # Check if PsExec64.exe exists
++        if (Test-Path -Path $PsExec64Path) {
++            Write-EnhancedLog -Message "Removing existing PsExec64.exe from: $TargetFolder"
++            # Remove PsExec64.exe
++            Remove-Item -Path $PsExec64Path -Force
++            Write-Output "PsExec64.exe has been removed from: $TargetFolder"
++        }
++        else {
++            Write-EnhancedLog -Message "No PsExec64.exe file found in: $TargetFolder"
++        }
++    }
++    catch {
++        # Handle any errors during the removal
++        Write-Error "An error occurred while trying to remove PsExec64.exe: $_"
++    }
++}
++
++
++
++
++
++
++function Download-PsExec {
++    [CmdletBinding()]
++    param(
++        [string]$TargetFolder = "$PSScriptRoot\private"
++    )
++
++    Begin {
++
++        Remove-ExistingPsExec
++    }
++
++
++
++    process {
++
++        # Define the URL for PsExec download
++        $url = "https://download.sysinternals.com/files/PSTools.zip"
++    
++        # Ensure the target folder exists
++        if (-Not (Test-Path -Path $TargetFolder)) {
++            New-Item -Path $TargetFolder -ItemType Directory
++        }
++  
++        # Full path for the downloaded file
++        $zipPath = Join-Path -Path $TargetFolder -ChildPath "PSTools.zip"
++  
++        try {
++            # Download the PSTools.zip file containing PsExec
++            Write-EnhancedLog -Message "Downloading PSTools.zip from: $url to: $zipPath"
++            Invoke-WebRequest -Uri $url -OutFile $zipPath
++  
++            # Extract PsExec64.exe from the zip file
++            Expand-Archive -Path $zipPath -DestinationPath "$TargetFolder\PStools" -Force
++  
++            # Specific extraction of PsExec64.exe
++            $extractedFolderPath = Join-Path -Path $TargetFolder -ChildPath "PSTools"
++            $PsExec64Path = Join-Path -Path $extractedFolderPath -ChildPath "PsExec64.exe"
++            $finalPath = Join-Path -Path $TargetFolder -ChildPath "PsExec64.exe"
++  
++            # Move PsExec64.exe to the desired location
++            if (Test-Path -Path $PsExec64Path) {
++  
++                Write-EnhancedLog -Message "Moving PSExec64.exe from: $PsExec64Path to: $finalPath"
++                Move-Item -Path $PsExec64Path -Destination $finalPath
++  
++                # Remove the downloaded zip file and extracted folder
++                Remove-Item -Path $zipPath -Force
++                Remove-Item -Path $extractedFolderPath -Recurse -Force
++  
++                Write-EnhancedLog -Message "PsExec64.exe has been successfully downloaded and moved to: $finalPath"
++            }
++        }
++        catch {
++            # Handle any errors during the process
++            Write-Error "An error occurred: $_"
++        }
++    }
++
++
++  
++
++}
++
++
++
++
++function Invoke-AsSystem {
++    <#
++.SYNOPSIS
++Executes a PowerShell script under the SYSTEM context, similar to Intune's execution context.
++
++.DESCRIPTION
++The Invoke-AsSystem function executes a PowerShell script using PsExec64.exe to run under the SYSTEM context. This method is useful for scenarios requiring elevated privileges beyond the current user's capabilities.
++
++.PARAMETER PsExec64Path
++Specifies the full path to PsExec64.exe. If not provided, it assumes PsExec64.exe is in the same directory as the script.
++
++.EXAMPLE
++Invoke-AsSystem -PsExec64Path "C:\Tools\PsExec64.exe"
++
++Executes PowerShell as SYSTEM using PsExec64.exe located at "C:\Tools\PsExec64.exe".
++
++.NOTES
++Ensure PsExec64.exe is available and the script has the necessary permissions to execute it.
++
++.LINK
++https://docs.microsoft.com/en-us/sysinternals/downloads/psexec
++#>
++    [CmdletBinding()]
++    param (
++        [Parameter(Mandatory = $true)]
++        [string]$PsExec64Path,
++        [string]$ScriptPathAsSYSTEM  # Path to the PowerShell script you want to run as SYSTEM
++    )
++
++    begin {
++        CheckAndElevate
++        # Define the arguments for PsExec64.exe to run PowerShell as SYSTEM with the script
++        $argList = "-accepteula -i -s -d powershell.exe -NoExit -ExecutionPolicy Bypass -File `"$ScriptPathAsSYSTEM`""
++        Write-EnhancedLog -Message "Preparing to execute PowerShell as SYSTEM using PsExec64 with the script: $ScriptPathAsSYSTEM" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++
++        Download-PsExec
++    }
++
++    process {
++        try {
++            # Ensure PsExec64Path exists
++            if (-not (Test-Path -Path $PsExec64Path)) {
++                $errorMessage = "PsExec64.exe not found at path: $PsExec64Path"
++                Write-EnhancedLog -Message $errorMessage -Level "ERROR" -ForegroundColor ([ConsoleColor]::Red)
++                throw $errorMessage
++            }
++
++            # Run PsExec64.exe with the defined arguments to execute the script as SYSTEM
++            $executingMessage = "Executing PsExec64.exe to start PowerShell as SYSTEM running script: $ScriptPathAsSYSTEM"
++            Write-EnhancedLog -Message $executingMessage -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++            Start-Process -FilePath "$PsExec64Path" -ArgumentList $argList -Wait -NoNewWindow
++            
++            Write-EnhancedLog -Message "SYSTEM session started. Closing elevated session..." -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++            exit
++
++        }
++        catch {
++            Write-EnhancedLog -Message "An error occurred: $_" -Level "ERROR" -ForegroundColor ([ConsoleColor]::Red)
++        }
++    }
++}
++
++
++
++
++# Assuming Invoke-AsSystem and Write-EnhancedLog are already defined
++# Update the path to your actual location of PsExec64.exe
++
++Write-EnhancedLog -Message "calling Test-RunningAsSystem" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++if (-not (Test-RunningAsSystem)) {
++    $privateFolderPath = Join-Path -Path $PSScriptRoot -ChildPath "private"
++    $PsExec64Path = Join-Path -Path $privateFolderPath -ChildPath "PsExec64.exe"
++
++    Write-EnhancedLog -Message "Current session is not running as SYSTEM. Attempting to invoke as SYSTEM..." -Level "INFO" -ForegroundColor ([ConsoleColor]::Yellow)
++
++    $ScriptToRunAsSystem = $MyInvocation.MyCommand.Path
++    Invoke-AsSystem -PsExec64Path $PsExec64Path -ScriptPath $ScriptToRunAsSystem
++
++}
++else {
++    Write-EnhancedLog -Message "Session is already running as SYSTEM." -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++}
++
++
++    
++    
++#################################################################################################################################
++################################################# END LOGGING ###################################################################
++#################################################################################################################################
++
++
++
++Write-EnhancedLog -Message "calling Test-RunningAsSystem" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++
++
++function Set-LocalPathBasedOnContext {
++    Write-EnhancedLog -Message "Checking running context..." -Level "INFO" -ForegroundColor ([System.ConsoleColor]::Cyan)
++    if (Test-RunningAsSystem) {
++        Write-EnhancedLog -Message "Running as system, setting path to Program Files" -Level "INFO" -ForegroundColor ([System.ConsoleColor]::Yellow)
++        return "$ENV:Programfiles\_MEM"
++    }
++    else {
++        Write-EnhancedLog -Message "Running as user, setting path to Local AppData" -Level "INFO" -ForegroundColor ([System.ConsoleColor]::Yellow)
++        return "$ENV:LOCALAPPDATA\_MEM"
++    }
++}
++
++
++$global:Path_local = Set-LocalPathBasedOnContext
++
++
++
++Write-EnhancedLog -Message "calling Initialize-ScriptVariables" -Level "INFO" -ForegroundColor ([ConsoleColor]::Green)
++    
++#################################################################################################################################
++################################################# END LOGGING ###################################################################
++#################################################################################################################################
++
++
++
++
++
++
++
++
++
++function Initialize-ScriptVariables {
++
++
++    <#
++.SYNOPSIS
++Initializes global script variables and defines the path for storing related files.
++
++.DESCRIPTION
++This function initializes global script variables such as PackageName, PackageUniqueGUID, Version, and ScriptMode. Additionally, it constructs the path where related files will be stored based on the provided parameters.
++
++.PARAMETER PackageName
++The name of the package being processed.
++
++.PARAMETER PackageUniqueGUID
++The unique identifier for the package being processed.
++
++.PARAMETER Version
++The version of the package being processed.
++
++.PARAMETER ScriptMode
++The mode in which the script is being executed (e.g., "Remediation", "PackageName").
++
++.EXAMPLE
++Initialize-ScriptVariables -PackageName "MyPackage" -PackageUniqueGUID "1234-5678" -Version 1 -ScriptMode "Remediation"
++
++This example initializes the script variables with the specified values.
++
++#>
++
++    [CmdletBinding()]
++    param (
++        [Parameter(Mandatory = $true)]
++        [string]$PackageName,
++
++        [Parameter(Mandatory = $true)]
++        [string]$PackageUniqueGUID,
++
++        [Parameter(Mandatory = $true)]
++        [int]$Version,
++
++        [Parameter(Mandatory = $true)]
++        [string]$ScriptMode,
++
++        [Parameter(Mandatory = $true)]
++        [string]$PackageExecutionContext
++    )
++
++    # Assuming Set-LocalPathBasedOnContext and Test-RunningAsSystem are defined elsewhere
++    # $global:Path_local = Set-LocalPathBasedOnContext
++
++    # Default logic for $Path_local if not set by Set-LocalPathBasedOnContext
++    if (-not $Path_local) {
++        if (Test-RunningAsSystem) {
++            # $Path_local = "$ENV:ProgramFiles\_MEM"
++            $Path_local = "c:\_MEM"
++        }
++        else {
++            $Path_local = "$ENV:LOCALAPPDATA\_MEM"
++        }
++    }
++
++    $Path_PR = "$Path_local\Data\$PackageName-$PackageUniqueGUID"
++    $schtaskName = "$PackageName - $PackageUniqueGUID"
++    $schtaskDescription = "Version $Version"
++
++    try {
++        # Assuming Write-EnhancedLog is defined elsewhere
++        Write-EnhancedLog -Message "Initializing script variables..." -Level "INFO" -ForegroundColor ([System.ConsoleColor]::Green)
++
++        # Returning a hashtable of all the important variables
++        return @{
++            PackageName             = $PackageName
++            PackageUniqueGUID       = $PackageUniqueGUID
++            Version                 = $Version
++            ScriptMode              = $ScriptMode
++            Path_local              = $Path_local
++            Path_PR                 = $Path_PR
++            schtaskName             = $schtaskName
++            schtaskDescription      = $schtaskDescription
++            PackageExecutionContext = $PackageExecutionContext
++        }
++    }
++    catch {
++        Write-Error "An error occurred while initializing script variables: $_"
++    }
++}
++
++# Invocation of the function and storing returned hashtable in a variable
++# $initializationInfo = Initialize-ScriptVariables -PackageName "YourPackageName" -PackageUniqueGUID "YourGUID" -Version 1 -ScriptMode "YourMode"
++
++
++# Call Initialize-ScriptVariables with splatting
++$InitializeScriptVariablesParams = @{
++    PackageName             = $PackageName
++    PackageUniqueGUID       = $PackageUniqueGUID
++    Version                 = $Version
++    ScriptMode              = $ScriptMode
++    PackageExecutionContext = $PackageExecutionContext
++}
++
++$initializationInfo = Initialize-ScriptVariables @InitializeScriptVariablesParams
++
++$initializationInfo
++
++$global:PackageName = $initializationInfo['PackageName']
++$global:PackageUniqueGUID = $initializationInfo['PackageUniqueGUID']
++$global:Version = $initializationInfo['Version']
++$global:ScriptMode = $initializationInfo['ScriptMode']
++$global:Path_local = $initializationInfo['Path_local']
++$global:Path_PR = $initializationInfo['Path_PR']
++$global:schtaskName = $initializationInfo['schtaskName']
++$global:schtaskDescription = $initializationInfo['schtaskDescription']
++$global:PackageExecutionContext = $initializationInfo['PackageExecutionContext']
++
++
++
++# Check if the scheduled task exists and matches the version
++$Task_existing = Get-ScheduledTask -TaskName $schtaskName -ErrorAction SilentlyContinue
++# if ($Task_existing -and $Task_existing.Description -like "Version $Version*") {
++if ($Task_existing -and $Task_existing.Description) {
++    Write-Host "Found it!"
++    exit 0
++}
++else {
++    # Write-Host "Not Found!"
++    exit 1
++}
+diff --git a/Examples/webscript/install.ps1 b/Examples/webscript/install.ps1
 new file mode 100644
-index 0000000..c3a7d55
+index 0000000..4d1994f
 --- /dev/null
-+++ b/main.ps1
-@@ -0,0 +1,344 @@
++++ b/Examples/webscript/install.ps1
+@@ -0,0 +1,302 @@
++param (
++    [Switch]$SimulatingIntune = $false
++)
++
++$currentExecutionPolicy = Get-ExecutionPolicy
++
++# If it's not already set to Bypass, change it
++if ($currentExecutionPolicy -ne 'Bypass') {
++    Write-Host "Setting Execution Policy to Bypass..."
++    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
++}
++else {
++    Write-Host "Execution Policy is already set to Bypass."
++}
++
++# ################################################################################################################################
++# ################################################ END Setting Execution Policy ##################################################
++# ################################################################################################################################
++
++# Create a time-stamped folder in the temp directory
++$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
++$tempFolder = [System.IO.Path]::Combine($env:TEMP, "Ensure-RunningAsSystem_$timestamp")
++
++# Ensure the temp folder exists
++if (-not (Test-Path -Path $tempFolder)) {
++    New-Item -Path $tempFolder -ItemType Directory | Out-Null
++}
++
++# Use the time-stamped temp folder for your paths
++$privateFolderPath = Join-Path -Path $tempFolder -ChildPath "private"
++$PsExec64Path = Join-Path -Path $privateFolderPath -ChildPath "PsExec64.exe"
++
++# Check if running as a web script (no $MyInvocation.MyCommand.Path)
++if (-not $MyInvocation.MyCommand.Path) {
++    Write-Host "Running as web script, downloading and executing locally..."
++
++    # Ensure TLS 1.2 is used for the download
++    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
++
++    # Create a time-stamped folder in the temp directory
++    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
++    $downloadFolder = Join-Path -Path $env:TEMP -ChildPath "TriggerWindowsUpdates_$timestamp"
++
++    # Ensure the folder exists
++    if (-not (Test-Path -Path $downloadFolder)) {
++        New-Item -Path $downloadFolder -ItemType Directory | Out-Null
++    }
++
++    # Download the script to the time-stamped folder
++    $localScriptPath = Join-Path -Path $downloadFolder -ChildPath "install.ps1"
++    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/aollivierre/WinUpdates/main/PR4B_TriggerWindowsUpdates-v4/install.ps1" -OutFile $localScriptPath
++
++    Write-Host "Downloading config.psd1 file..."
++
++    # Download the config.psd1 file to the time-stamped folder
++    $configFilePath = Join-Path -Path $downloadFolder -ChildPath "config.psd1"
++    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/aollivierre/WinUpdates/main/PR4B_TriggerWindowsUpdates-v4/config.psd1" -OutFile $configFilePath
++
++    # Execute the script locally
++    & $localScriptPath
++
++    Exit # Exit after running the script locally
++}
++
++else {
++    # If running in a regular context, use the actual path of the script
++    $ScriptToRunAsSystem = $MyInvocation.MyCommand.Path
++}
++
++# Ensure the private folder exists before continuing
++if (-not (Test-Path -Path $privateFolderPath)) {
++    New-Item -Path $privateFolderPath -ItemType Directory | Out-Null
++}
++
++
++
++# Conditional check for SimulatingIntune switch
++if ($SimulatingIntune) {
++    # If not running as a web script, run as SYSTEM using PsExec
++    Write-Host "Simulating Intune environment. Running script as SYSTEM..."
++
++    Write-Host "Running as SYSTEM..."
++
++
++    # Call the function to run as SYSTEM
++    $EnsureRunningAsSystemParams = @{
++        PsExec64Path = $PsExec64Path
++        ScriptPath   = $ScriptToRunAsSystem
++        TargetFolder = $privateFolderPath
++    }
++
++    # Run Ensure-RunningAsSystem only if SimulatingIntune is set
++    Ensure-RunningAsSystem @EnsureRunningAsSystemParams
++}
++else {
++    Write-Host "Not simulating Intune. Skipping SYSTEM execution."
++}
++
++
++# ################################################################################################################################
++# ################################################ END CALLING AS SYSTEM (Uncomment for debugging) ###############################
++# ################################################################################################################################
++
++
++# Set environment variable globally for all users
++[System.Environment]::SetEnvironmentVariable('EnvironmentMode', 'prod', 'Machine')
++
++# Retrieve the environment mode (default to 'prod' if not set)
++$mode = $env:EnvironmentMode
++
++#region FIRING UP MODULE STARTER
++#################################################################################################
++#                                                                                               #
++#                                 FIRING UP MODULE STARTER                                      #
++#                                                                                               #
++#################################################################################################
++
++Invoke-Expression (Invoke-RestMethod "https://raw.githubusercontent.com/aollivierre/module-starter/main/Install-EnhancedModuleStarterAO.ps1")
++
++# Define a hashtable for splatting
++$moduleStarterParams = @{
++    Mode                   = 'prod'
++    SkipPSGalleryModules   = $false
++    SkipCheckandElevate    = $false
++    SkipPowerShell7Install = $false
++    SkipEnhancedModules    = $false
++    SkipGitRepos           = $true
++}
++
++# Call the function using the splat
++Invoke-ModuleStarter @moduleStarterParams
++
++#endregion FIRING UP MODULE STARTER
++
++# Toggle based on the environment mode
++switch ($mode) {
++    'dev' {
++        Write-EnhancedLog -Message "Running in development mode" -Level 'WARNING'
++        # Your development logic here
++    }
++    'prod' {
++        Write-EnhancedLog -Message "Running in production mode" -ForegroundColor Green
++        # Your production logic here
++    }
++    default {
++        Write-EnhancedLog -Message "Unknown mode. Defaulting to production." -ForegroundColor Red
++        # Default to production
++    }
++}
++
++
++
++#region HANDLE PSF MODERN LOGGING
++#################################################################################################
++#                                                                                               #
++#                            HANDLE PSF MODERN LOGGING                                          #
++#                                                                                               #
++#################################################################################################
++Set-PSFConfig -Fullname 'PSFramework.Logging.FileSystem.ModernLog' -Value $true -PassThru | Register-PSFConfig -Scope SystemDefault
++
++# Define the base logs path and job name
++$JobName = "WindowsUpdates"
++$parentScriptName = Get-ParentScriptName
++Write-EnhancedLog -Message "Parent Script Name: $parentScriptName"
++
++# Call the Get-PSFCSVLogFilePath function to generate the dynamic log file path
++$paramGetPSFCSVLogFilePath = @{
++    LogsPath         = 'C:\Logs\PSF'
++    JobName          = $jobName
++    parentScriptName = $parentScriptName
++}
++
++$csvLogFilePath = Get-PSFCSVLogFilePath @paramGetPSFCSVLogFilePath
++
++$instanceName = "$parentScriptName-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
++
++# Configure the PSFramework logging provider to use CSV format
++$paramSetPSFLoggingProvider = @{
++    Name            = 'logfile'
++    InstanceName    = $instanceName  # Use a unique instance name
++    FilePath        = $csvLogFilePath  # Use the dynamically generated file path
++    Enabled         = $true
++    FileType        = 'CSV'
++    EnableException = $true
++}
++Set-PSFLoggingProvider @paramSetPSFLoggingProvider
++#endregion HANDLE PSF MODERN LOGGING
++
++
++#region HANDLE Transript LOGGING
++#################################################################################################
++#                                                                                               #
++#                            HANDLE Transript LOGGING                                           #
++#                                                                                               #
++#################################################################################################
++# Start the script with error handling
++try {
++    # Generate the transcript file path
++    $GetTranscriptFilePathParams = @{
++        TranscriptsPath  = "C:\Logs\Transcript"
++        JobName          = $jobName
++        parentScriptName = $parentScriptName
++    }
++    $transcriptPath = Get-TranscriptFilePath @GetTranscriptFilePathParams
++    
++    # Start the transcript
++    Write-EnhancedLog -Message "Starting transcript at: $transcriptPath"
++    Start-Transcript -Path $transcriptPath
++}
++catch {
++    Write-EnhancedLog -Message "An error occurred during script execution: $_" -Level 'ERROR'
++    if ($transcriptPath) {
++        Stop-Transcript
++        Write-EnhancedLog -Message "Transcript stopped." -ForegroundColor Cyan
++        # Stop logging in the finally block
++
++    }
++    else {
++        Write-EnhancedLog -Message "Transcript was not started due to an earlier error." -ForegroundColor Red
++    }
++
++    # Stop PSF Logging
++
++    # Ensure the log is written before proceeding
++    Wait-PSFMessage
++
++    # Stop logging in the finally block by disabling the provider
++    Set-PSFLoggingProvider -Name 'logfile' -InstanceName $instanceName -Enabled $false
++
++    Handle-Error -ErrorRecord $_
++    throw $_  # Re-throw the error after logging it
++}
++#endregion HANDLE Transript LOGGING
++
++try {
++    #region Script Logic
++    #################################################################################################
++    #                                                                                               #
++    #                                    Script Logic                                               #
++    #                                                                                               #
++    #################################################################################################
++
++    ###########################################################################################################################
++    #############################################STARTING THE MAIN SCHEDULED TASK LOGIC HERE###################################
++    ###########################################################################################################################
++
++    # Define the parameters using a hashtable
++    $taskParams = @{
++        ConfigPath = "$PSScriptRoot\config.psd1"
++        FileName   = "HiddenScript.vbs"
++        Scriptroot = "$PSScriptRoot"
++    }
++
++    # Call the function with the splatted parameters
++    CreateAndRegisterScheduledTask @taskParams
++ 
++    #endregion Script Logic
++}
++catch {
++    Write-EnhancedLog -Message "An error occurred during script execution: $_" -Level 'ERROR'
++    if ($transcriptPath) {
++        Stop-Transcript
++        Write-EnhancedLog -Message "Transcript stopped." -ForegroundColor Cyan
++        # Stop logging in the finally block
++
++    }
++    else {
++        Write-EnhancedLog -Message "Transcript was not started due to an earlier error." -ForegroundColor Red
++    }
++
++    # Stop PSF Logging
++
++    # Ensure the log is written before proceeding
++    Wait-PSFMessage
++
++    # Stop logging in the finally block by disabling the provider
++    Set-PSFLoggingProvider -Name 'logfile' -InstanceName $instanceName -Enabled $false
++
++    Handle-Error -ErrorRecord $_
++    throw $_  # Re-throw the error after logging it
++} 
++finally {
++    # Ensure that the transcript is stopped even if an error occurs
++    if ($transcriptPath) {
++        Stop-Transcript
++        Write-EnhancedLog -Message "Transcript stopped." -ForegroundColor Cyan
++        # Stop logging in the finally block
++
++    }
++    else {
++        Write-EnhancedLog -Message "Transcript was not started due to an earlier error." -ForegroundColor Red
++    }
++    # 
++
++    
++    # Ensure the log is written before proceeding
++    Wait-PSFMessage
++
++    # Stop logging in the finally block by disabling the provider
++    Set-PSFLoggingProvider -Name 'logfile' -InstanceName $instanceName -Enabled $false
++
++}
+\ No newline at end of file
+diff --git a/Readme.md b/Readme.md
+index 2097a85..cc58774 100644
+--- a/Readme.md
++++ b/Readme.md
+@@ -2,26 +2,106 @@
+ 
+ ### Call using PowerShell:
+ 
+-- Using full URL:
++- **Recommended: Using Web Launcher (downloads all dependencies)**:
+     ```powershell
+-    powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/setuplab/main/setup.ps1)"
++    iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
+     ```
+-
+-- Using shortened URLs:
++    
++    Or with parameters:
+     ```powershell
+-    powershell -Command "iex (irm https://bit.ly/4c3XH76)"
++    & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
+     ```
+-    
++
++- **Alternative: Direct execution (for simple scripts only)**:
+     ```powershell
+-    powershell -Command "iex (irm bit.ly/4c3XH76)"
++    powershell -Command "iex (irm https://raw.githubusercontent.com/aollivierre/setuplab/main/main.ps1)"
+     ```
++    Note: This method won't work properly as main.ps1 requires additional files (SetupLabCore.psm1 and software-config.json)
++
++Perfect! I've successfully created a modern, modular PowerShell setup framework with the following improvements:
++
++  ≡ƒÜÇ Key Features Implemented:
++
++  1. Modular Architecture
++
++  - SetupLabCore.psm1: Centralized module with all shared functions
++  - software-config.json: Configuration-driven approach for easy management
++  - main.ps1: Clean orchestrator script
++
++  2. Parallel Installation Γ£à
++
++  - Uses PowerShell jobs for concurrent installations
++  - Configurable max concurrency (default: 4)
++  - Real-time progress monitoring
++
++  3. New Software Added Γ£à
++
++  - Google Chrome
++  - Mozilla Firefox
++  - Warp Terminal
++
++  4. Enhanced Features
++
++  - Skip validation option: -SkipValidation parameter
++  - Improved detection: Unified validation across all software
++  - Category filtering: Install only specific categories
++  - Individual software selection: Install specific packages
++
++  5. Better Organization
++
++  - All old scripts archived in Archive/ folder
++  - Centralized logging in Logs/ folder
++  - Clean root directory structure
+ 
+-### If you are already in PowerShell (URL is case sensitive):
++  ≡ƒôª Usage Examples:
+ 
++  ## Local Execution:
+   ```powershell
+-  iex (irm bit.ly/4c3XH76)
++  # Install everything with defaults
++  .\main.ps1
++
++  # Skip validation and use 6 concurrent installs
++  .\main.ps1 -SkipValidation -MaxConcurrency 6
++
++  # Install only Development and Browsers categories
++  .\main.ps1 -Categories "Development,Browsers"
++
++  # Install specific software only
++  .\main.ps1 -Software "Git,Chrome,VSCode"
++
++  # List all available software
++  .\main.ps1 -ListSoftware
+   ```
+ 
++  ## Web Execution (no local files required):
++  ```powershell
++  # Install everything with defaults
++  iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
++
++  # Skip validation and use 6 concurrent installs
++  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
++
++  # Install only Development and Browsers categories
++  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Categories "Development","Browsers"
++
++  # Install specific software only
++  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Software "Git","Chrome","VSCode"
++
++  # List all available software
++  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -ListSoftware
++  ```
++
++  ≡ƒÄ» Configuration
++
++  Edit software-config.json to:
++  - Enable/disable specific software
++  - Modify download URLs
++  - Change installation arguments
++  - Add new software packages
++
++  The new system maintains all functionality from the original scripts while adding parallel execution, better error handling, and a cleaner architecture!
++
++
+ 
+ 
+ 
+diff --git a/SetupLab-WebLauncher.ps1 b/SetupLab-WebLauncher.ps1
+new file mode 100644
+index 0000000..b72856a
+--- /dev/null
++++ b/SetupLab-WebLauncher.ps1
+@@ -0,0 +1,226 @@
 +#Requires -Version 5.1
 +<#
 +.SYNOPSIS
-+    Main orchestrator script for SetupLab - Automated Lab Environment Setup
++    Web launcher script for SetupLab - Downloads and executes SetupLab from GitHub
 +.DESCRIPTION
-+    This script orchestrates the installation of multiple software packages in parallel
-+    using a modular approach with shared functions and configuration-driven installation.
++    This script downloads the SetupLab components from GitHub to a temporary directory
++    and executes the main script. This allows running SetupLab directly from a URL
++    without manually cloning the repository.
++.PARAMETER BaseUrl
++    Base URL for the GitHub raw content (default: SetupLab main branch)
 +.PARAMETER SkipValidation
 +    Skip pre-installation validation checks and install all enabled software
 +.PARAMETER MaxConcurrency
@@ -1662,23 +1539,25 @@ index 0000000..c3a7d55
 +.PARAMETER ListSoftware
 +    List all available software without installing
 +.PARAMETER ConfigFile
-+    Path to custom configuration file (default: software-config.json)
++    Name of configuration file to download (default: software-config.json)
 +.EXAMPLE
-+    .\main.ps1
-+    Runs the setup with default settings
++    # Execute directly from web:
++    iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1')
 +.EXAMPLE
-+    .\main.ps1 -SkipValidation -MaxConcurrency 6
-+    Runs setup skipping validation with 6 concurrent installations
++    # Execute with parameters:
++    & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -SkipValidation -MaxConcurrency 6
 +.EXAMPLE
-+    .\main.ps1 -Categories "Development,Browsers"
-+    Only installs software from Development and Browsers categories
-+.EXAMPLE
-+    .\main.ps1 -Software "Git,Visual Studio Code,Chrome"
-+    Only installs the specified software
++    # Download and execute manually:
++    $launcher = "$env:TEMP\SetupLab-WebLauncher.ps1"
++    Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1' -OutFile $launcher
++    & $launcher -Categories "Development,Browsers"
 +#>
 +
 +[CmdletBinding()]
 +param(
++    [Parameter(Mandatory = $false)]
++    [string]$BaseUrl = "https://raw.githubusercontent.com/aollivierre/setuplab/main",
++    
 +    [Parameter(Mandatory = $false)]
 +    [switch]$SkipValidation,
 +    
@@ -1699,845 +1578,270 @@ index 0000000..c3a7d55
 +    [string]$ConfigFile = "software-config.json"
 +)
 +
-+#region Script Initialization
-+$ErrorActionPreference = 'Stop'
-+$VerbosePreference = 'Continue'
-+
-+# Import core module
-+$modulePath = Join-Path $PSScriptRoot "SetupLabCore.psm1"
-+if (-not (Test-Path $modulePath)) {
-+    Write-Host "ERROR: Core module not found at: $modulePath" -ForegroundColor Red
-+    exit 1
-+}
-+
-+Import-Module $modulePath -Force
-+Write-SetupLog "SetupLab - Automated Lab Environment Setup" -Level Info
-+Write-SetupLog ("=" * 60) -Level Info
-+#endregion
-+
-+#region Configuration Loading
-+try {
-+    $configPath = if ([System.IO.Path]::IsPathRooted($ConfigFile)) {
-+        $ConfigFile
-+    } else {
-+        Join-Path $PSScriptRoot $ConfigFile
++#region Functions
++function Write-WebLog {
++    param(
++        [string]$Message,
++        [string]$Level = "Info"
++    )
++    
++    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
++    $color = switch ($Level) {
++        "Error" { "Red" }
++        "Warning" { "Yellow" }
++        "Success" { "Green" }
++        "Info" { "White" }
++        default { "White" }
 +    }
 +    
-+    $config = Get-SoftwareConfiguration -ConfigFile $configPath
-+    Write-SetupLog "Loaded configuration from: $configPath" -Level Success
++    Write-Host "[$timestamp] $Message" -ForegroundColor $color
++}
++
++function Test-Url {
++    param([string]$Url)
++    
++    try {
++        $response = Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -TimeoutSec 10
++        return $response.StatusCode -eq 200
++    }
++    catch {
++        return $false
++    }
++}
++
++function Download-File {
++    param(
++        [string]$Url,
++        [string]$OutputPath
++    )
++    
++    try {
++        Write-WebLog "Downloading: $Url" -Level Info
++        
++        # Ensure TLS 1.2 is enabled
++        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
++        
++        # Download the file
++        Invoke-WebRequest -Uri $Url -OutFile $OutputPath -UseBasicParsing -ErrorAction Stop
++        
++        if (Test-Path $OutputPath) {
++            Write-WebLog "Successfully downloaded to: $OutputPath" -Level Success
++            return $true
++        }
++        else {
++            Write-WebLog "Download appeared to succeed but file not found: $OutputPath" -Level Error
++            return $false
++        }
++    }
++    catch {
++        Write-WebLog "Failed to download $Url : $_" -Level Error
++        return $false
++    }
++}
++#endregion
++
++#region Main Execution
++Write-WebLog "SetupLab Web Launcher" -Level Info
++Write-WebLog ("=" * 60) -Level Info
++
++# Ensure BaseUrl doesn't end with a slash
++$BaseUrl = $BaseUrl.TrimEnd('/')
++
++# Create temporary directory
++$tempDir = Join-Path $env:TEMP "SetupLab_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
++Write-WebLog "Creating temporary directory: $tempDir" -Level Info
++
++try {
++    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 +}
 +catch {
-+    Write-SetupLog "Failed to load configuration: $_" -Level Error
++    Write-WebLog "Failed to create temporary directory: $_" -Level Error
 +    exit 1
 +}
-+#endregion
 +
-+#region Software Selection
-+$allSoftware = $config.software | Where-Object { $_.enabled -eq $true }
++# Define files to download
++$filesToDownload = @(
++    @{
++        Name = "main.ps1"
++        Url = "$BaseUrl/main.ps1"
++        Required = $true
++    },
++    @{
++        Name = "SetupLabCore.psm1"
++        Url = "$BaseUrl/SetupLabCore.psm1"
++        Required = $true
++    },
++    @{
++        Name = $ConfigFile
++        Url = "$BaseUrl/$ConfigFile"
++        Required = $true
++    }
++)
 +
-+# Filter by categories if specified
-+if ($Categories.Count -gt 0) {
-+    $allSoftware = $allSoftware | Where-Object { $_.category -in $Categories }
-+    Write-SetupLog "Filtering by categories: $($Categories -join ', ')" -Level Info
-+}
-+
-+# Filter by specific software names if specified
-+if ($Software.Count -gt 0) {
-+    $allSoftware = $allSoftware | Where-Object { $_.name -in $Software }
-+    Write-SetupLog "Filtering by software: $($Software -join ', ')" -Level Info
-+}
-+
-+# Apply settings from config if not overridden by parameters
-+if ($PSBoundParameters.ContainsKey('SkipValidation') -eq $false -and $config.settings.skipValidation) {
-+    $SkipValidation = $config.settings.skipValidation
-+}
-+
-+if ($PSBoundParameters.ContainsKey('MaxConcurrency') -eq $false -and $config.settings.maxConcurrency) {
-+    $MaxConcurrency = $config.settings.maxConcurrency
-+}
-+#endregion
-+
-+#region List Software Mode
-+if ($ListSoftware) {
-+    Write-SetupLog "Available Software:" -Level Info
-+    Write-SetupLog ("=" * 60) -Level Info
++# Download all required files
++$downloadSuccess = $true
++foreach ($file in $filesToDownload) {
++    $outputPath = Join-Path $tempDir $file.Name
 +    
-+    $groupedSoftware = $config.software | Group-Object -Property category | Sort-Object Name
-+    
-+    foreach ($group in $groupedSoftware) {
-+        Write-SetupLog "" -Level Info
-+        Write-SetupLog "Category: $($group.Name)" -Level Info
-+        Write-SetupLog ("-" * 30) -Level Info
-+        
-+        foreach ($sw in ($group.Group | Sort-Object name)) {
-+            $status = if ($sw.enabled) { "Enabled" } else { "Disabled" }
-+            $installed = if (Test-SoftwareInstalled -Name $sw.name -RegistryName $sw.registryName -ExecutablePath $sw.executablePath) {
-+                " [INSTALLED]"
-+            } else {
-+                ""
-+            }
-+            
-+            Write-Host ("  {0,-30} {1,-10}{2}" -f $sw.name, "($status)", $installed) -ForegroundColor $(if ($sw.enabled) { 'White' } else { 'Gray' })
++    if (-not (Download-File -Url $file.Url -OutputPath $outputPath)) {
++        if ($file.Required) {
++            Write-WebLog "Failed to download required file: $($file.Name)" -Level Error
++            $downloadSuccess = $false
++            break
 +        }
-+    }
-+    
-+    Write-SetupLog "" -Level Info
-+    Write-SetupLog "Total: $($config.software.Count) software packages" -Level Info
-+    exit 0
-+}
-+#endregion
-+
-+#region Admin Check
-+if (-not (Test-AdminPrivileges)) {
-+    Write-SetupLog "Administrator privileges required. Requesting elevation..." -Level Warning
-+    
-+    # Build parameter hashtable for elevation
-+    $elevationParams = @{}
-+    
-+    if ($SkipValidation) { $elevationParams['SkipValidation'] = $true }
-+    if ($PSBoundParameters.ContainsKey('MaxConcurrency')) { $elevationParams['MaxConcurrency'] = $MaxConcurrency }
-+    if ($Categories.Count -gt 0) { $elevationParams['Categories'] = $Categories }
-+    if ($Software.Count -gt 0) { $elevationParams['Software'] = $Software }
-+    if ($PSBoundParameters.ContainsKey('ConfigFile')) { $elevationParams['ConfigFile'] = $ConfigFile }
-+    
-+    Request-AdminElevation -ScriptPath $PSCommandPath -Parameters $elevationParams
-+    exit 0
-+}
-+
-+Write-SetupLog "Running with administrator privileges" -Level Success
-+#endregion
-+
-+#region Pre-Installation Summary
-+Write-SetupLog "" -Level Info
-+Write-SetupLog "Installation Summary:" -Level Info
-+Write-SetupLog "  Total packages: $($allSoftware.Count)" -Level Info
-+Write-SetupLog "  Skip validation: $SkipValidation" -Level Info
-+Write-SetupLog "  Max concurrency: $MaxConcurrency" -Level Info
-+Write-SetupLog "" -Level Info
-+
-+if ($allSoftware.Count -eq 0) {
-+    Write-SetupLog "No software selected for installation" -Level Warning
-+    exit 0
-+}
-+
-+Write-SetupLog "Software to install:" -Level Info
-+foreach ($sw in ($allSoftware | Sort-Object category, name)) {
-+    Write-SetupLog "  [$($sw.category)] $($sw.name)" -Level Info
-+}
-+
-+Write-SetupLog "" -Level Info
-+Write-Host "Press any key to continue or CTRL+C to cancel..." -ForegroundColor Yellow
-+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-+#endregion
-+
-+#region Enable Windows Features
-+Write-SetupLog "" -Level Info
-+Write-SetupLog "Checking Windows features..." -Level Info
-+
-+# Enable Remote Desktop if requested
-+$rdpSoftware = $allSoftware | Where-Object { $_.name -eq "Remote Desktop" }
-+if ($rdpSoftware) {
-+    Write-SetupLog "Enabling Remote Desktop..." -Level Info
-+    try {
-+        # Enable Remote Desktop
-+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-+        Write-SetupLog "Remote Desktop enabled successfully" -Level Success
-+        
-+        # Remove from installation list as it's not a software install
-+        $allSoftware = $allSoftware | Where-Object { $_.name -ne "Remote Desktop" }
-+    }
-+    catch {
-+        Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
-+    }
-+}
-+#endregion
-+
-+#region Parallel Installation
-+Write-SetupLog "" -Level Info
-+Write-SetupLog "Starting parallel installation process..." -Level Info
-+
-+$installationResult = Start-ParallelInstallation -Installations $allSoftware -MaxConcurrency $MaxConcurrency -SkipValidation:$SkipValidation
-+
-+# Detailed results
-+if ($installationResult.Failed.Count -gt 0) {
-+    Write-SetupLog "" -Level Info
-+    Write-SetupLog "Failed installations:" -Level Error
-+    foreach ($failed in $installationResult.Failed) {
-+        Write-SetupLog "  - $($failed.name)" -Level Error
-+    }
-+}
-+#endregion
-+
-+#region Windows Theme Configuration
-+$themePath = Join-Path $PSScriptRoot "DarkTheme"
-+if ((Test-Path $themePath) -and $installationResult.Completed.Count -gt 0) {
-+    Write-SetupLog "" -Level Info
-+    $response = Read-Host "Would you like to apply Windows Dark Theme? (Y/N)"
-+    
-+    if ($response -eq 'Y' -or $response -eq 'y') {
-+        try {
-+            Write-SetupLog "Applying Windows Dark Theme..." -Level Info
-+            
-+            $themeScript = Get-ChildItem -Path $themePath -Filter "*.ps1" | Select-Object -First 1
-+            if ($themeScript) {
-+                & $themeScript.FullName
-+                Write-SetupLog "Dark theme applied successfully" -Level Success
-+            }
-+            else {
-+                Write-SetupLog "Dark theme script not found" -Level Warning
-+            }
-+        }
-+        catch {
-+            Write-SetupLog "Failed to apply dark theme: $_" -Level Error
++        else {
++            Write-WebLog "Failed to download optional file: $($file.Name), continuing..." -Level Warning
 +        }
 +    }
 +}
-+#endregion
 +
-+#region Environment Variables Update
-+if ($installationResult.Completed.Count -gt 0) {
-+    Write-SetupLog "" -Level Info
-+    Write-SetupLog "Updating environment variables..." -Level Info
-+    
-+    try {
-+        # Refresh PATH environment variable
-+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-+        Write-SetupLog "Environment variables updated" -Level Success
-+    }
-+    catch {
-+        Write-SetupLog "Failed to update environment variables: $_" -Level Warning
-+    }
++if (-not $downloadSuccess) {
++    Write-WebLog "Failed to download all required files. Cleaning up..." -Level Error
++    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
++    exit 1
 +}
-+#endregion
 +
-+#region Final Summary
-+Write-SetupLog "" -Level Info
-+Write-SetupLog ("=" * 60) -Level Info
-+Write-SetupLog "Setup Complete!" -Level Info
-+Write-SetupLog ("=" * 60) -Level Info
++Write-WebLog "" -Level Info
++Write-WebLog "All required files downloaded successfully" -Level Success
++Write-WebLog "" -Level Info
 +
-+# Create summary report
-+$summaryPath = Join-Path $PSScriptRoot "Logs" "SetupSummary_$((Get-Date).ToString('yyyyMMdd_HHmmss')).txt"
-+$summary = @"
-+SetupLab Installation Summary
-+Generated: $(Get-Date)
-+===============================
++# Build parameters for main.ps1
++$mainScriptPath = Join-Path $tempDir "main.ps1"
++$mainParams = @{}
 +
-+Completed Installations ($($installationResult.Completed.Count)):
-+$($installationResult.Completed | ForEach-Object { "  - $($_.name)" } | Out-String)
++if ($SkipValidation) { $mainParams['SkipValidation'] = $true }
++if ($PSBoundParameters.ContainsKey('MaxConcurrency')) { $mainParams['MaxConcurrency'] = $MaxConcurrency }
++if ($Categories.Count -gt 0) { $mainParams['Categories'] = $Categories }
++if ($Software.Count -gt 0) { $mainParams['Software'] = $Software }
++if ($ListSoftware) { $mainParams['ListSoftware'] = $true }
++if ($PSBoundParameters.ContainsKey('ConfigFile')) { $mainParams['ConfigFile'] = $ConfigFile }
 +
-+Failed Installations ($($installationResult.Failed.Count)):
-+$($installationResult.Failed | ForEach-Object { "  - $($_.name)" } | Out-String)
-+
-+Skipped Installations ($($installationResult.Skipped.Count)):
-+$($installationResult.Skipped | ForEach-Object { "  - $($_.name)" } | Out-String)
-+
-+Configuration:
-+  Max Concurrency: $MaxConcurrency
-+  Skip Validation: $SkipValidation
-+  Config File: $ConfigFile
-+"@
-+
-+$summary | Out-File -FilePath $summaryPath -Encoding UTF8
-+Write-SetupLog "Summary report saved to: $summaryPath" -Level Info
-+#endregion
-+
-+#region Post-Installation Notes
-+if ($installationResult.Completed.Count -gt 0) {
-+    Write-SetupLog "" -Level Info
-+    Write-SetupLog "Post-Installation Notes:" -Level Info
++# Execute main.ps1
++try {
++    Write-WebLog "Executing SetupLab main script..." -Level Info
++    Write-WebLog "" -Level Info
 +    
-+    # Docker Desktop
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Docker Desktop" }) {
-+        Write-SetupLog "  - Docker Desktop: Restart required for full functionality" -Level Warning
-+    }
++    # Change to temp directory to ensure relative paths work
++    Push-Location $tempDir
 +    
-+    # VS Code
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Visual Studio Code" }) {
-+        Write-SetupLog "  - VS Code: Added to PATH and context menus" -Level Info
-+    }
++    # Execute the script
++    & $mainScriptPath @mainParams
 +    
-+    # Git
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Git" }) {
-+        Write-SetupLog "  - Git: Available in PATH for all terminals" -Level Info
-+    }
-+    
-+    # Node.js
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Node.js" }) {
-+        Write-SetupLog "  - Node.js: npm and npx are now available" -Level Info
-+    }
-+    
-+    # Windows Terminal
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Windows Terminal" }) {
-+        Write-SetupLog "  - Windows Terminal: Set as default terminal in Windows 11" -Level Info
-+    }
-+    
-+    # Claude Code
-+    if ($installationResult.Completed | Where-Object { $_.name -eq "Claude Code" }) {
-+        Write-SetupLog "  - Claude Code: Run 'claude --help' to get started" -Level Info
-+    }
++    # Return to original directory
++    Pop-Location
 +}
-+#endregion
-+
-+Write-SetupLog "" -Level Info
-+Write-SetupLog "Setup completed. Check the summary report for details." -Level Success
-+
-+# Keep window open if running in a new process
-+if ($Host.Name -eq 'ConsoleHost') {
-+    Write-Host "`nPress any key to exit..." -ForegroundColor Yellow
-+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
++catch {
++    Pop-Location
++    Write-WebLog "Error executing main script: $_" -Level Error
++    exit 1
 +}
++finally {
++    # Cleanup temporary directory
++    Write-WebLog "" -Level Info
++    Write-WebLog "Cleaning up temporary files..." -Level Info
++    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
++}
++
++Write-WebLog "SetupLab Web Launcher completed" -Level Success
++#endregion
 \ No newline at end of file
-diff --git a/setup.ps1 b/setup.ps1
-deleted file mode 100644
-index de773a2..0000000
---- a/setup.ps1
-+++ /dev/null
-@@ -1,319 +0,0 @@
--# Initialize the global steps list
--$global:steps = [System.Collections.Generic.List[PSCustomObject]]::new()
--$global:currentStep = 0
--$processList = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
--$installationResults = [System.Collections.Generic.List[PSCustomObject]]::new()
--
--
--function Test-Admin {
--    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
--    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
--}
--
--# Function to add a step
--function Add-Step {
--    param (
--        [string]$description
--    )
--    $global:steps.Add([PSCustomObject]@{ Description = $description })
--}
--
--# Function to log the current step
--function Log-Step {
--    $global:currentStep++
--    $totalSteps = $global:steps.Count
--    $stepDescription = $global:steps[$global:currentStep - 1].Description
--    Write-Host "Step [$global:currentStep/$totalSteps]: $stepDescription" -ForegroundColor Cyan
--}
--
--# Function for logging with color coding
--function Write-Log {
--    param (
--        [string]$Message,
--        [string]$Level = "INFO"
--    )
--
--    # Get the PowerShell call stack to determine the actual calling function
--    $callStack = Get-PSCallStack
--    $callerFunction = if ($callStack.Count -ge 2) { $callStack[1].Command } else { '<Unknown>' }
--
--    # Prepare the formatted message with the actual calling function information
--    $formattedMessage = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$Level] [$callerFunction] $Message"
--
--    # Display the log message based on the log level using Write-Host
--    switch ($Level.ToUpper()) {
--        "DEBUG" { Write-Host $formattedMessage -ForegroundColor DarkGray }
--        "INFO" { Write-Host $formattedMessage -ForegroundColor Green }
--        "NOTICE" { Write-Host $formattedMessage -ForegroundColor Cyan }
--        "WARNING" { Write-Host $formattedMessage -ForegroundColor Yellow }
--        "ERROR" { Write-Host $formattedMessage -ForegroundColor Red }
--        "CRITICAL" { Write-Host $formattedMessage -ForegroundColor Magenta }
--        default { Write-Host $formattedMessage -ForegroundColor White }
--    }
--
--    # Append to log file
--    $logFilePath = [System.IO.Path]::Combine($env:TEMP, 'setuplab.log')
--    $formattedMessage | Out-File -FilePath $logFilePath -Append -Encoding utf8
--}
--
--# Function to validate URL
--function Test-Url {
--    param (
--        [string]$url
--    )
--    try {
--        Invoke-RestMethod -Uri $url -Method Head -ErrorAction Stop
--        return $true
--    }
--    catch {
--        return $false
--    }
--}
--
--# Function to get PowerShell path
--function Get-PowerShellPath {
--    if (Test-Path "C:\Program Files\PowerShell\7\pwsh.exe") {
--        return "C:\Program Files\PowerShell\7\pwsh.exe"
--    }
--    elseif (Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe") {
--        return "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
--    }
--    else {
--        throw "Neither PowerShell 7 nor PowerShell 5 was found on this system."
--    }
--}
--
--
--# Function to validate software installation via registry with retry mechanism
--
--
--# Function to validate software installation via registry with retry mechanism
--function Validate-Installation {
--    param (
--        [string]$SoftwareName,
--        [version]$MinVersion = [version]"0.0.0.0",
--        [string]$RegistryPath = "",
--        [int]$MaxRetries = 3,
--        [int]$DelayBetweenRetries = 5  # Delay in seconds
--    )
--
--    if ($SoftwareName -eq "RDP") {
--        return @{ IsInstalled = $false }  # Force the RDP script to always run
--    }
--
--    if ($SoftwareName -eq "Windows Terminal") {
--        return @{ IsInstalled = $false }  # Force the Windows Terminal script to always run as it will handle its own validation logic
--    }
--
--    $retryCount = 0
--    $validationSucceeded = $false
--
--    while ($retryCount -lt $MaxRetries -and -not $validationSucceeded) {
--        $registryPaths = @(
--            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
--            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
--            "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"  # Include HKCU for user-installed apps
--        )
--
--        if ($RegistryPath) {
--            # If a specific registry path is provided, check only that path
--            if (Test-Path $RegistryPath) {
--                $app = Get-ItemProperty -Path $RegistryPath -ErrorAction SilentlyContinue
--                if ($app -and $app.DisplayName -like "*$SoftwareName*") {
--                    $installedVersion = [version]$app.DisplayVersion
--                    if ($installedVersion -ge $MinVersion) {
--                        $validationSucceeded = $true
--                        return @{
--                            IsInstalled = $true
--                            Version     = $installedVersion
--                            ProductCode = $app.PSChildName
--                        }
--                    }
--                }
--            }
--        }
--        else {
--            # If no specific registry path, check standard locations
--            foreach ($path in $registryPaths) {
--                $items = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
--                foreach ($item in $items) {
--                    $app = Get-ItemProperty -Path $item.PsPath -ErrorAction SilentlyContinue
--                    if ($app.DisplayName -like "*$SoftwareName*") {
--                        $installedVersion = [version]$app.DisplayVersion
--                        if ($installedVersion -ge $MinVersion) {
--                            $validationSucceeded = $true
--                            return @{
--                                IsInstalled = $true
--                                Version     = $installedVersion
--                                ProductCode = $app.PSChildName
--                            }
--                        }
--                    }
--                }
--            }
--        }
--
--        $retryCount++
--        if (-not $validationSucceeded) {
--            Write-Log "Validation attempt $retryCount failed: $SoftwareName not found or version does not meet minimum requirements. Retrying in $DelayBetweenRetries seconds..." -Level "WARNING"
--            Start-Sleep -Seconds $DelayBetweenRetries
--        }
--    }
--
--    return @{IsInstalled = $false }
--}
--
--
--
--
--
--# Define the GitHub URLs of the scripts and corresponding software names
--$scriptDetails = @(
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-7zip.ps1"; SoftwareName = "7-Zip"; MinVersion = [version]"24.07.0.0" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-VSCode.ps1"; SoftwareName = "Visual Studio Code"; MinVersion = [version]"1.82.1.0" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Everything.ps1"; SoftwareName = "Everything"; MinVersion = [version]"1.4.1.1024" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-FileLocatorPro.ps1"; SoftwareName = "FileLocator Pro"; MinVersion = [version]"8.5.2968" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-Git.ps1"; SoftwareName = "Git"; MinVersion = [version]"2.41.0.0" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-PowerShell7.ps1"; SoftwareName = "PowerShell"; MinVersion = [version]"7.3.6.0" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-GitHubDesktop.ps1"; SoftwareName = "GitHub Desktop"; MinVersion = [version]"3.4.3" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-WindowsTerminal.ps1"; SoftwareName = "Windows Terminal"; MinVersion = [version]"1.20.240626001" },
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Enable-RDP.ps1"; SoftwareName = "RDP"; MinVersion = [version]"0.0.0.0" } 
--    @{ Url = "https://raw.githubusercontent.com/aollivierre/setuplab/main/Install-DockerDesktop.ps1"; SoftwareName = "Docker Desktop"; MinVersion = [version]"4.34.2" } 
--)
--
--
--# Add steps for each script
--foreach ($detail in $scriptDetails) {
--    Add-Step ("Running script from URL: $($detail.Url)")
--}
--
--# Main script execution with try-catch for error handling
--try {
--
--    # Elevate to administrator if not already
--    if (-not (Test-Admin)) {
--        Write-Log "Restarting script with elevated permissions..."
--        $startProcessParams = @{
--            FilePath     = "powershell.exe"
--            ArgumentList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath)
--            Verb         = "RunAs"
--        }
--        Start-Process @startProcessParams
--        exit
--    }
--    
--
--    $powerShellPath = Get-PowerShellPath
--
--    foreach ($detail in $scriptDetails) {
--        $url = $detail.Url
--        $softwareName = $detail.SoftwareName
--        $minVersion = $detail.MinVersion
--        $registryPath = $detail.RegistryPath  # Directly extract RegistryPath
--
--        # Validate before running the installation script
--        Write-Log "Validating existing installation of $softwareName..."
--
--        # Pass RegistryPath if it's available
--        $installationCheck = if ($registryPath) {
--            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5 -RegistryPath $registryPath
--        }
--        else {
--            Validate-Installation -SoftwareName $softwareName -MinVersion $minVersion -MaxRetries 3 -DelayBetweenRetries 5
--        }
--
--        if ($installationCheck.IsInstalled) {
--            Write-Log "$softwareName version $($installationCheck.Version) is already installed. Skipping installation." -Level "INFO"
--            $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Already Installed"; VersionFound = $installationCheck.Version })
--        }
--        else {
--            if (Test-Url -url $url) {
--                Log-Step
--                Write-Log "Running script from URL: $url" -Level "INFO"
--                # $process = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoExit", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')") -Verb RunAs -PassThru
--
--                $startProcessParams = @{
--                    FilePath     = $powerShellPath
--                    ArgumentList = @(
--                        "-NoExit",
--                        "-NoProfile",
--                        "-ExecutionPolicy", "Bypass",
--                        "-Command", "Invoke-Expression (Invoke-RestMethod -Uri '$url')"
--                    )
--                    Verb         = "RunAs"
--                    PassThru     = $true
--                }
--                
--                $process = Start-Process @startProcessParams
--                
--                $processList.Add($process)
--
--                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Installed"; VersionFound = "N/A" })
--            }
--            else {
--                Write-Log "URL $url is not accessible" -Level "ERROR"
--                $installationResults.Add([pscustomobject]@{ SoftwareName = $softwareName; Status = "Failed - URL Not Accessible"; VersionFound = "N/A" })
--            }
--        }
--    }
--
--    # Wait for all processes to complete
--    foreach ($process in $processList) {
--        $process.WaitForExit()
--    }
--
--    # Post-installation validation
--    foreach ($result in $installationResults) {
--        if ($result.Status -eq "Installed") {
--            if ($result.SoftwareName -in @("RDP", "Windows Terminal")) {
--                Write-Log "Skipping post-installation validation for $($result.SoftwareName)." -Level "INFO"
--                $result.Status = "Successfully Installed"
--                continue
--            }
--
--            Write-Log "Validating installation of $($result.SoftwareName)..."
--            $validationResult = Validate-Installation -SoftwareName $result.SoftwareName -MinVersion ($scriptDetails | Where-Object { $_.SoftwareName -eq $result.SoftwareName }).MinVersion
--
--            if ($validationResult.IsInstalled) {
--                Write-Log "Validation successful: $($result.SoftwareName) version $($validationResult.Version) is installed." -Level "INFO"
--                $result.VersionFound = $validationResult.Version
--                $result.Status = "Successfully Installed"
--            }
--            else {
--                Write-Log "Validation failed: $($result.SoftwareName) was not found on the system." -Level "ERROR"
--                $result.Status = "Failed - Not Found After Installation"
--            }
--        }
--    }
--
--
--    # Summary report
--    $totalSoftware = $installationResults.Count
--    $successfulInstallations = $installationResults | Where-Object { $_.Status -eq "Successfully Installed" }
--    $alreadyInstalled = $installationResults | Where-Object { $_.Status -eq "Already Installed" }
--    $failedInstallations = $installationResults | Where-Object { $_.Status -like "Failed*" }
--
--    Write-Host "Total Software: $totalSoftware" -ForegroundColor Cyan
--    Write-Host "Successful Installations: $($successfulInstallations.Count)" -ForegroundColor Green
--    Write-Host "Already Installed: $($alreadyInstalled.Count)" -ForegroundColor Yellow
--    Write-Host "Failed Installations: $($failedInstallations.Count)" -ForegroundColor Red
--
--    # Detailed Summary
--    Write-Host "`nDetailed Summary:" -ForegroundColor Cyan
--    $installationResults | ForEach-Object {
--        Write-Host "Software: $($_.SoftwareName)" -ForegroundColor White
--        Write-Host "Status: $($_.Status)" -ForegroundColor White
--        Write-Host "Version Found: $($_.VersionFound)" -ForegroundColor White
--        Write-Host "----------------------------------------" -ForegroundColor Gray
--    }
--}
--catch {
--    # Capture the error details
--    $errorDetails = $_ | Out-String
--    Write-Log "An error occurred: $errorDetails" -Level "ERROR"
--    throw
--}
--
--
--# Keep the PowerShell window open to review the logs
--Read-Host 'Press Enter to close this window...'
-\ No newline at end of file
-diff --git a/software-config.json b/software-config.json
+diff --git a/Test-WebLauncher.ps1 b/Test-WebLauncher.ps1
 new file mode 100644
-index 0000000..8b98e8c
+index 0000000..c206f4f
 --- /dev/null
-+++ b/software-config.json
-@@ -0,0 +1,219 @@
-+{
-+  "software": [
-+    {
-+      "name": "7-Zip",
-+      "enabled": true,
-+      "registryName": "7-Zip",
-+      "executablePath": "C:\\Program Files\\7-Zip\\7z.exe",
-+      "downloadUrl": "https://www.7-zip.org/a/7z2500-x64.msi",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart"],
-+      "minimumVersion": null,
-+      "category": "Utilities"
-+    },
-+    {
-+      "name": "Git",
-+      "enabled": true,
-+      "registryName": "Git",
-+      "executablePath": "C:\\Program Files\\Git\\bin\\git.exe",
-+      "downloadUrl": "https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/Git-2.50.1-64-bit.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS"],
-+      "minimumVersion": "2.40.0",
-+      "category": "Development"
-+    },
-+    {
-+      "name": "Visual Studio Code",
-+      "enabled": true,
-+      "registryName": "Microsoft Visual Studio Code",
-+      "executablePath": "C:\\Program Files\\Microsoft VS Code\\Code.exe",
-+      "downloadUrl": "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/verysilent", "/mergetasks=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"],
-+      "minimumVersion": null,
-+      "category": "Development"
-+    },
-+    {
-+      "name": "Node.js",
-+      "enabled": true,
-+      "registryName": "Node.js",
-+      "executablePath": "C:\\Program Files\\nodejs\\node.exe",
-+      "downloadUrl": "https://nodejs.org/dist/v22.17.1/node-v22.17.1-x64.msi",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart", "ADDLOCAL=NodeRuntime,npm", "REMOVE=NodeETWSupport,NodePerfCtrSupport"],
-+      "minimumVersion": "20.0.0",
-+      "category": "Development"
-+    },
-+    {
-+      "name": "GitHub Desktop",
-+      "enabled": true,
-+      "registryName": "GitHub Desktop",
-+      "executablePath": "C:\\Users\\%USERNAME%\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe",
-+      "downloadUrl": "https://central.github.com/deployments/desktop/desktop/latest/win32",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/S"],
-+      "minimumVersion": null,
-+      "category": "Development"
-+    },
-+    {
-+      "name": "GitHub CLI",
-+      "enabled": true,
-+      "registryName": "GitHub CLI",
-+      "executablePath": "C:\\Program Files\\GitHub CLI\\gh.exe",
-+      "downloadUrl": "https://github.com/cli/cli/releases/download/v2.75.1/gh_2.75.1_windows_amd64.msi",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart"],
-+      "minimumVersion": null,
-+      "category": "Development"
-+    },
-+    {
-+      "name": "PowerShell 7",
-+      "enabled": true,
-+      "registryName": "PowerShell 7*",
-+      "executablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
-+      "downloadUrl": "https://github.com/PowerShell/PowerShell/releases/download/v7.5.2/PowerShell-7.5.2-win-x64.msi",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart", "ADD_EXPLORER_CONTEXT_MENU_OPENPOWERSHELL=1", "ADD_FILE_CONTEXT_MENU_RUNPOWERSHELL=1", "ENABLE_PSREMOTING=1", "REGISTER_MANIFEST=1", "USE_MU=1", "ENABLE_MU=1", "ADD_PATH=1"],
-+      "minimumVersion": "7.5.0",
-+      "category": "Development"
-+    },
-+    {
-+      "name": "Windows Terminal",
-+      "enabled": true,
-+      "registryName": "Windows Terminal",
-+      "executablePath": null,
-+      "downloadUrl": "https://github.com/microsoft/terminal/releases/download/v1.21.10351.0/Microsoft.WindowsTerminal_1.21.10351.0_8wekyb3d8bbwe.msixbundle",
-+      "installerExtension": ".msixbundle",
-+      "installType": "MSIX",
-+      "installArguments": [],
-+      "minimumVersion": null,
-+      "category": "Utilities"
-+    },
-+    {
-+      "name": "Docker Desktop",
-+      "enabled": false,
-+      "registryName": "Docker Desktop",
-+      "executablePath": "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
-+      "downloadUrl": "https://desktop.docker.com/win/stable/amd64/Docker%20Desktop%20Installer.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["install", "--quiet", "--accept-license"],
-+      "minimumVersion": null,
-+      "category": "Development"
-+    },
-+    {
-+      "name": "ShareX",
-+      "enabled": true,
-+      "registryName": "ShareX",
-+      "executablePath": "C:\\Program Files\\ShareX\\ShareX.exe",
-+      "downloadUrl": "https://github.com/ShareX/ShareX/releases/download/v17.1.0/ShareX-17.1.0-setup.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"],
-+      "minimumVersion": null,
-+      "category": "Utilities"
-+    },
-+    {
-+      "name": "Everything",
-+      "enabled": true,
-+      "registryName": "Everything*",
-+      "executablePath": "C:\\Program Files\\Everything\\Everything.exe",
-+      "downloadUrl": "https://www.voidtools.com/Everything-1.4.1.1028.x64-Setup.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/S"],
-+      "minimumVersion": null,
-+      "category": "Utilities"
-+    },
-+    {
-+      "name": "FileLocator Pro",
-+      "enabled": true,
-+      "registryName": "FileLocator Pro*",
-+      "executablePath": "C:\\Program Files\\Mythicsoft\\FileLocator Pro\\FileLocatorPro.exe",
-+      "downloadUrl": "https://download.mythicsoft.com/flp/FileLocatorPro_3522_x64.msi",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart"],
-+      "minimumVersion": null,
-+      "category": "Utilities"
-+    },
-+    {
-+      "name": "Visual C++ Redistributables",
-+      "enabled": true,
-+      "registryName": "Microsoft Visual C++ 2015-2022 Redistributable (x64)",
-+      "executablePath": null,
-+      "downloadUrl": "https://aka.ms/vs/17/release/vc_redist.x64.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/install", "/quiet", "/norestart"],
-+      "minimumVersion": null,
-+      "category": "Runtime"
-+    },
-+    {
-+      "name": "Claude Code",
-+      "enabled": true,
-+      "registryName": null,
-+      "executablePath": null,
-+      "downloadUrl": null,
-+      "installerExtension": null,
-+      "installType": "NPM",
-+      "installArguments": [],
-+      "minimumVersion": null,
-+      "category": "Development",
-+      "npmPackage": "@anthropic-ai/claude-code",
-+      "npmInstallArgs": ["--ignore-scripts"],
-+      "postInstallCommand": "echo 'Claude Code installed! Run: npx win-claude-code@latest'"
-+    },
-+    {
-+      "name": "Google Chrome",
-+      "enabled": true,
-+      "registryName": "Google Chrome",
-+      "executablePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-+      "downloadUrl": "https://dl.google.com/chrome/install/latest/chrome_installer.exe",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/silent", "/install"],
-+      "minimumVersion": null,
-+      "category": "Browsers"
-+    },
-+    {
-+      "name": "Mozilla Firefox",
-+      "enabled": true,
-+      "registryName": "Mozilla Firefox*",
-+      "executablePath": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
-+      "downloadUrl": "https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US",
-+      "installerExtension": ".exe",
-+      "installType": "EXE",
-+      "installArguments": ["/S"],
-+      "minimumVersion": null,
-+      "category": "Browsers"
-+    },
-+    {
-+      "name": "Warp Terminal",
-+      "enabled": true,
-+      "registryName": "Warp",
-+      "executablePath": "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Warp\\Warp.exe",
-+      "downloadUrl": "https://app.warp.dev/download/win",
-+      "installerExtension": ".msi",
-+      "installType": "MSI",
-+      "installArguments": ["/quiet", "/norestart"],
-+      "minimumVersion": null,
-+      "category": "Utilities"
++++ b/Test-WebLauncher.ps1
+@@ -0,0 +1,93 @@
++#Requires -Version 5.1
++<#
++.SYNOPSIS
++    Test script for SetupLab Web Launcher
++.DESCRIPTION
++    This script tests the web launcher functionality by simulating web execution locally
++.EXAMPLE
++    .\Test-WebLauncher.ps1
++    Tests basic functionality
++.EXAMPLE
++    .\Test-WebLauncher.ps1 -TestListSoftware
++    Tests the ListSoftware functionality
++#>
++
++[CmdletBinding()]
++param(
++    [switch]$TestListSoftware,
++    [switch]$TestWithParameters,
++    [switch]$UseGitHubUrl
++)
++
++Write-Host "SetupLab Web Launcher Test Script" -ForegroundColor Cyan
++Write-Host ("=" * 60) -ForegroundColor Cyan
++Write-Host ""
++
++# Test 1: Test local execution of web launcher
++if (-not $UseGitHubUrl) {
++    Write-Host "Test 1: Testing local web launcher execution" -ForegroundColor Yellow
++    Write-Host "This simulates what would happen when running from GitHub" -ForegroundColor Gray
++    Write-Host ""
++    
++    $launcherPath = Join-Path $PSScriptRoot "SetupLab-WebLauncher.ps1"
++    
++    if (-not (Test-Path $launcherPath)) {
++        Write-Host "ERROR: SetupLab-WebLauncher.ps1 not found at: $launcherPath" -ForegroundColor Red
++        exit 1
 +    }
-+  ],
-+  "settings": {
-+    "maxConcurrency": 4,
-+    "retryAttempts": 3,
-+    "retryDelay": 5,
-+    "logRetention": 30,
-+    "skipValidation": false,
-+    "enableCategories": ["Utilities", "Development", "Runtime", "Browsers"]
-+  }
++    
++    # Test basic list functionality
++    if ($TestListSoftware) {
++        Write-Host "Testing ListSoftware parameter..." -ForegroundColor Green
++        & $launcherPath -ListSoftware -BaseUrl "file:///$PSScriptRoot"
++    }
++    elseif ($TestWithParameters) {
++        Write-Host "Testing with parameters (SkipValidation, MaxConcurrency=2)..." -ForegroundColor Green
++        Write-Host "NOTE: This will actually try to install software!" -ForegroundColor Red
++        Write-Host "Press CTRL+C within 5 seconds to cancel..." -ForegroundColor Yellow
++        Start-Sleep -Seconds 5
++        & $launcherPath -SkipValidation -MaxConcurrency 2 -Categories "Development" -BaseUrl "file:///$PSScriptRoot"
++    }
++    else {
++        Write-Host "Testing basic execution (ListSoftware only for safety)..." -ForegroundColor Green
++        & $launcherPath -ListSoftware -BaseUrl "file:///$PSScriptRoot"
++    }
 +}
++else {
++    # Test 2: Test actual GitHub URL execution
++    Write-Host "Test 2: Testing actual GitHub URL execution" -ForegroundColor Yellow
++    Write-Host "This will download from the actual GitHub repository" -ForegroundColor Gray
++    Write-Host ""
++    
++    $githubUrl = 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'
++    
++    Write-Host "Testing with GitHub URL: $githubUrl" -ForegroundColor Green
++    Write-Host "Executing: & ([scriptblock]::Create((irm '$githubUrl'))) -ListSoftware" -ForegroundColor Gray
++    Write-Host ""
++    
++    try {
++        & ([scriptblock]::Create((Invoke-RestMethod -Uri $githubUrl))) -ListSoftware
++        Write-Host ""
++        Write-Host "SUCCESS: Web launcher executed successfully from GitHub!" -ForegroundColor Green
++    }
++    catch {
++        Write-Host "ERROR: Failed to execute web launcher from GitHub" -ForegroundColor Red
++        Write-Host "Error: $_" -ForegroundColor Red
++    }
++}
++
++Write-Host ""
++Write-Host "Test completed!" -ForegroundColor Cyan
++
++# Show example commands for manual testing
++Write-Host ""
++Write-Host "Example commands for manual testing:" -ForegroundColor Yellow
++Write-Host ""
++Write-Host "1. List software (safe):" -ForegroundColor White
++Write-Host "   iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1') -ListSoftware" -ForegroundColor Gray
++Write-Host ""
++Write-Host "2. With parameters:" -ForegroundColor White
++Write-Host "   & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -ListSoftware" -ForegroundColor Gray
++Write-Host ""
++Write-Host "3. Install specific categories:" -ForegroundColor White
++Write-Host "   & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher.ps1'))) -Categories 'Development','Browsers' -SkipValidation" -ForegroundColor Gray
 \ No newline at end of file

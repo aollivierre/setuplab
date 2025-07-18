@@ -126,13 +126,29 @@ $filesToDownload = @(
         Name = $ConfigFile
         Url = "$BaseUrl/$ConfigFile"
         Required = $true
+    },
+    @{
+        Name = "DarkTheme/Set-WindowsTheme.ps1"
+        Url = "$BaseUrl/DarkTheme/Set-WindowsTheme.ps1"
+        Required = $true
+        SubDir = "DarkTheme"
     }
 )
 
 # Download all required files
 $downloadSuccess = $true
 foreach ($file in $filesToDownload) {
-    $outputPath = Join-Path $tempDir $file.Name
+    # Handle subdirectories
+    if ($file.SubDir) {
+        $subDirPath = Join-Path $tempDir $file.SubDir
+        if (-not (Test-Path $subDirPath)) {
+            New-Item -ItemType Directory -Path $subDirPath -Force | Out-Null
+        }
+        $outputPath = Join-Path $tempDir $file.Name
+    }
+    else {
+        $outputPath = Join-Path $tempDir $file.Name
+    }
     
     if (-not (Download-File -Url $file.Url -OutputPath $outputPath)) {
         if ($file.Required) {

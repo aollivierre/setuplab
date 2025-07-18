@@ -184,12 +184,80 @@ Write-Host "Press any key to continue or CTRL+C to cancel..." -ForegroundColor Y
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 #endregion
 
-#region Enable Windows Features
+#region System Configuration (DNS, Rename, Domain Join, RDP)
 Write-SetupLog "" -Level Info
-Write-SetupLog "Configuring Windows features..." -Level Info
+Write-SetupLog "Starting system configuration..." -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
 
-# Always enable Remote Desktop
-Write-SetupLog "Enabling Remote Desktop..." -Level Info
+# 1. Configure DNS Servers
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 1: Configuring DNS servers..." -Level Info
+$dnsScript = Join-Path $PSScriptRoot "Set-DNSServers.ps1"
+if (Test-Path $dnsScript) {
+    try {
+        & $dnsScript
+        Write-SetupLog "DNS configuration completed" -Level Success
+    }
+    catch {
+        Write-SetupLog "DNS configuration failed: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "DNS configuration script not found at: $dnsScript" -Level Warning
+}
+
+# 2. Rename Computer
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 2: Renaming computer..." -Level Info
+$renameScript = Join-Path $PSScriptRoot "Rename-Computer.ps1"
+$needsReboot = $false
+if (Test-Path $renameScript) {
+    try {
+        # Capture the script output to determine if rename happened
+        $renameOutput = & $renameScript
+        if ($renameOutput -match "successfully renamed") {
+            $needsReboot = $true
+            Write-SetupLog "Computer rename completed - reboot required" -Level Success
+        }
+        else {
+            Write-SetupLog "Computer already has the correct name or rename skipped" -Level Info
+        }
+    }
+    catch {
+        Write-SetupLog "Computer rename failed: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Computer rename script not found at: $renameScript" -Level Warning
+}
+
+# 3. Join Domain
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 3: Joining domain..." -Level Info
+$joinScript = Join-Path $PSScriptRoot "Join-Domain.ps1"
+if (Test-Path $joinScript) {
+    try {
+        # Capture the script output to determine if domain join happened
+        $joinOutput = & $joinScript
+        if ($joinOutput -match "Successfully joined to domain") {
+            $needsReboot = $true
+            Write-SetupLog "Domain join completed - reboot required" -Level Success
+        }
+        else {
+            Write-SetupLog "Computer already domain joined or join skipped" -Level Info
+        }
+    }
+    catch {
+        Write-SetupLog "Domain join failed: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Domain join script not found at: $joinScript" -Level Warning
+}
+
+# 4. Enable Remote Desktop
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 4: Enabling Remote Desktop..." -Level Info
 try {
     # Enable Remote Desktop
     Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
@@ -198,6 +266,45 @@ try {
 }
 catch {
     Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
+}
+
+Write-SetupLog "" -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
+
+# Check if reboot is needed before continuing
+if ($needsReboot) {
+    Write-SetupLog "" -Level Warning
+    Write-SetupLog "IMPORTANT: A system reboot is required!" -Level Warning
+    Write-SetupLog "The computer name was changed and/or domain join was performed." -Level Warning
+    Write-SetupLog "Please reboot before installing applications." -Level Warning
+    Write-SetupLog "" -Level Warning
+    
+    Write-Host ""
+    Write-Host "SYSTEM REBOOT REQUIRED!" -ForegroundColor Red -BackgroundColor Yellow
+    Write-Host ""
+    Write-Host "The following changes require a reboot:" -ForegroundColor Yellow
+    Write-Host "  - Computer rename" -ForegroundColor Yellow
+    Write-Host "  - Domain join" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "It is strongly recommended to reboot before installing applications." -ForegroundColor Yellow
+    Write-Host ""
+    
+    $rebootResponse = Read-Host "Do you want to reboot now? (Y/N)"
+    if ($rebootResponse -eq 'Y' -or $rebootResponse -eq 'y') {
+        Write-SetupLog "User chose to reboot. Restarting in 10 seconds..." -Level Warning
+        Write-Host "Restarting computer in 10 seconds..." -ForegroundColor Yellow
+        Write-Host "Run this script again after reboot to install applications." -ForegroundColor Cyan
+        Start-Sleep -Seconds 10
+        Restart-Computer -Force
+        exit
+    }
+    else {
+        Write-SetupLog "User chose to continue without reboot - NOT RECOMMENDED" -Level Warning
+        Write-Host ""
+        Write-Host "WARNING: Continuing without reboot may cause installation issues!" -ForegroundColor Red
+        Write-Host "Press any key to continue anyway..." -ForegroundColor Yellow
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    }
 }
 #endregion
 

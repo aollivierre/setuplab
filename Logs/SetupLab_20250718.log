@@ -1,0 +1,37 @@
+[2025-07-18 05:33:29] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-18 05:33:29] [Info] ============================================================
+[2025-07-18 05:33:29] [Debug] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-18 05:33:29] [Success] Loaded configuration from: C:\code\setuplab\software-config.json
+[2025-07-18 05:33:29] [Info] Available Software:
+[2025-07-18 05:33:29] [Info] ============================================================
+
+[2025-07-18 05:33:29] [Info] Category: Browsers
+[2025-07-18 05:33:29] [Info] ------------------------------
+[2025-07-18 05:33:29] [Success] Google Chrome found in registry
+[2025-07-18 05:33:29] [Success] Mozilla Firefox found at: C:\Program Files\Mozilla Firefox\firefox.exe
+
+[2025-07-18 05:33:29] [Info] Category: Development
+[2025-07-18 05:33:29] [Info] ------------------------------
+[2025-07-18 05:33:29] [Info] Claude Code not found on system
+[2025-07-18 05:33:29] [Info] Docker Desktop not found on system
+[2025-07-18 05:33:29] [Success] Git found at: C:\Program Files\Git\bin\git.exe
+[2025-07-18 05:33:29] [Success] GitHub CLI found at: C:\Program Files\GitHub CLI\gh.exe
+[2025-07-18 05:33:29] [Success] GitHub Desktop found at: C:\Users\admin-abdullah\AppData\Local\GitHubDesktop\GitHubDesktop.exe
+[2025-07-18 05:33:29] [Success] Node.js found at: C:\Program Files\nodejs\node.exe
+[2025-07-18 05:33:29] [Success] PowerShell 7 found at: C:\Program Files\PowerShell\7\pwsh.exe
+[2025-07-18 05:33:29] [Success] Visual Studio Code found at: C:\Program Files\Microsoft VS Code\Code.exe
+
+[2025-07-18 05:33:29] [Info] Category: Runtime
+[2025-07-18 05:33:29] [Info] ------------------------------
+[2025-07-18 05:33:29] [Success] Visual C++ Redistributables found in registry
+
+[2025-07-18 05:33:29] [Info] Category: Utilities
+[2025-07-18 05:33:30] [Info] ------------------------------
+[2025-07-18 05:33:30] [Success] 7-Zip found at: C:\Program Files\7-Zip\7z.exe
+[2025-07-18 05:33:30] [Success] Everything found at: C:\Program Files\Everything\Everything.exe
+[2025-07-18 05:33:30] [Success] FileLocator Pro found at: C:\Program Files\Mythicsoft\FileLocator Pro\FileLocatorPro.exe
+[2025-07-18 05:33:30] [Success] ShareX found at: C:\Program Files\ShareX\ShareX.exe
+[2025-07-18 05:33:30] [Success] Warp Terminal found in registry
+[2025-07-18 05:33:30] [Success] Windows Terminal version 1.22.11141.0 found via MSIX package
+
+[2025-07-18 05:33:30] [Info] Total: 17 software packages

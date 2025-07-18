@@ -132,6 +132,21 @@ $filesToDownload = @(
         Url = "$BaseUrl/DarkTheme/Set-WindowsTheme.ps1"
         Required = $true
         SubDir = "DarkTheme"
+    },
+    @{
+        Name = "Set-DNSServers.ps1"
+        Url = "$BaseUrl/Set-DNSServers.ps1"
+        Required = $true
+    },
+    @{
+        Name = "Rename-Computer.ps1"
+        Url = "$BaseUrl/Rename-Computer.ps1"
+        Required = $true
+    },
+    @{
+        Name = "Join-Domain.ps1"
+        Url = "$BaseUrl/Join-Domain.ps1"
+        Required = $true
     }
 )
 

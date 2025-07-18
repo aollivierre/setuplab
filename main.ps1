@@ -186,24 +186,18 @@ $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
 #region Enable Windows Features
 Write-SetupLog "" -Level Info
-Write-SetupLog "Checking Windows features..." -Level Info
+Write-SetupLog "Configuring Windows features..." -Level Info
 
-# Enable Remote Desktop if requested
-$rdpSoftware = $allSoftware | Where-Object { $_.name -eq "Remote Desktop" }
-if ($rdpSoftware) {
-    Write-SetupLog "Enabling Remote Desktop..." -Level Info
-    try {
-        # Enable Remote Desktop
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Write-SetupLog "Remote Desktop enabled successfully" -Level Success
-        
-        # Remove from installation list as it's not a software install
-        $allSoftware = $allSoftware | Where-Object { $_.name -ne "Remote Desktop" }
-    }
-    catch {
-        Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
-    }
+# Always enable Remote Desktop
+Write-SetupLog "Enabling Remote Desktop..." -Level Info
+try {
+    # Enable Remote Desktop
+    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    Write-SetupLog "Remote Desktop enabled successfully" -Level Success
+}
+catch {
+    Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
 }
 #endregion
 
@@ -224,28 +218,28 @@ if ($installationResult.Failed.Count -gt 0) {
 #endregion
 
 #region Windows Theme Configuration
+# Always apply Dark Theme
 $themePath = Join-Path $PSScriptRoot "DarkTheme"
-if ((Test-Path $themePath) -and $installationResult.Completed.Count -gt 0) {
+if (Test-Path $themePath) {
     Write-SetupLog "" -Level Info
-    $response = Read-Host "Would you like to apply Windows Dark Theme? (Y/N)"
+    Write-SetupLog "Applying Windows Dark Theme automatically..." -Level Info
     
-    if ($response -eq 'Y' -or $response -eq 'y') {
-        try {
-            Write-SetupLog "Applying Windows Dark Theme..." -Level Info
-            
-            $themeScript = Get-ChildItem -Path $themePath -Filter "*.ps1" | Select-Object -First 1
-            if ($themeScript) {
-                & $themeScript.FullName
-                Write-SetupLog "Dark theme applied successfully" -Level Success
-            }
-            else {
-                Write-SetupLog "Dark theme script not found" -Level Warning
-            }
+    try {
+        $themeScript = Get-ChildItem -Path $themePath -Filter "*.ps1" | Select-Object -First 1
+        if ($themeScript) {
+            & $themeScript.FullName -Mode dark -RestartExplorer $false
+            Write-SetupLog "Dark theme applied successfully" -Level Success
         }
-        catch {
-            Write-SetupLog "Failed to apply dark theme: $_" -Level Error
+        else {
+            Write-SetupLog "Dark theme script not found" -Level Warning
         }
     }
+    catch {
+        Write-SetupLog "Failed to apply dark theme: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Dark theme directory not found at: $themePath" -Level Warning
 }
 #endregion
 

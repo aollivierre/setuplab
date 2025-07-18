@@ -1,9 +1,10 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Renames the computer to WinUpgrade3
+    Prompts for and renames the computer to a user-specified name
 .DESCRIPTION
-    This script renames the computer and optionally restarts it
+    This script prompts the user for a new computer name, validates it,
+    renames the computer and optionally restarts it
 .EXAMPLE
     .\Rename-Computer.ps1
 #>
@@ -12,7 +13,7 @@
 param()
 
 #region Script Configuration
-$NewComputerName = "WinUpgrade3"
+# Prompt user for new computer name
 #endregion
 
 #region Main Script
@@ -23,7 +24,30 @@ try {
     # Get current computer name
     $CurrentName = $env:COMPUTERNAME
     Write-Host "`nCurrent computer name: $CurrentName" -ForegroundColor Yellow
-    Write-Host "New computer name: $NewComputerName" -ForegroundColor Green
+    
+    # Prompt for new computer name
+    Write-Host "`nPlease enter the new computer name (15 characters max, alphanumeric and hyphens only):" -ForegroundColor Cyan
+    $NewComputerName = Read-Host "New computer name"
+    
+    # Validate computer name
+    if ([string]::IsNullOrWhiteSpace($NewComputerName)) {
+        Write-Host "`nNo computer name provided. Exiting..." -ForegroundColor Yellow
+        exit 0
+    }
+    
+    # Validate length (NetBIOS name limit is 15 characters)
+    if ($NewComputerName.Length -gt 15) {
+        Write-Host "`nError: Computer name cannot exceed 15 characters." -ForegroundColor Red
+        exit 1
+    }
+    
+    # Validate characters (alphanumeric and hyphens only, cannot start with hyphen)
+    if ($NewComputerName -notmatch '^[a-zA-Z0-9][a-zA-Z0-9-]*$') {
+        Write-Host "`nError: Computer name can only contain letters, numbers, and hyphens (cannot start with hyphen)." -ForegroundColor Red
+        exit 1
+    }
+    
+    Write-Host "`nNew computer name: $NewComputerName" -ForegroundColor Green
     
     if ($CurrentName -eq $NewComputerName) {
         Write-Host "`nComputer is already named $NewComputerName" -ForegroundColor Green

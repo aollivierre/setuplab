@@ -147,6 +147,23 @@ $filesToDownload = @(
         Name = "Join-Domain.ps1"
         Url = "$BaseUrl/Join-Domain.ps1"
         Required = $true
+    },
+    @{
+        Name = "Configure-WindowsTerminal.ps1"
+        Url = "$BaseUrl/Configure-WindowsTerminal.ps1"
+        Required = $true
+    },
+    @{
+        Name = "Terminal/settings.json"
+        Url = "$BaseUrl/Terminal/settings.json"
+        Required = $true
+        SubDir = "Terminal"
+    },
+    @{
+        Name = "Terminal/LaunchPowerShellAsSystem.ps1"
+        Url = "$BaseUrl/Terminal/LaunchPowerShellAsSystem.ps1"
+        Required = $true
+        SubDir = "Terminal"
     }
 )
 

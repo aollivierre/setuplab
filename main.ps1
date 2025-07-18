@@ -350,6 +350,26 @@ else {
 }
 #endregion
 
+#region Configure Windows Terminal and Sysinternals
+# Configure Windows Terminal with custom profile and download Sysinternals
+Write-SetupLog "" -Level Info
+Write-SetupLog "Configuring Windows Terminal and downloading Sysinternals..." -Level Info
+
+$configureScript = Join-Path $PSScriptRoot "Configure-WindowsTerminal.ps1"
+if (Test-Path $configureScript) {
+    try {
+        & $configureScript
+        Write-SetupLog "Windows Terminal configuration and Sysinternals download completed" -Level Success
+    }
+    catch {
+        Write-SetupLog "Configuration script failed: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Configuration script not found at: $configureScript" -Level Warning
+}
+#endregion
+
 #region Environment Variables Update
 if ($installationResult.Completed.Count -gt 0) {
     Write-SetupLog "" -Level Info

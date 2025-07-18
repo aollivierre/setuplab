@@ -10,6 +10,12 @@ This command ensures you always get the latest version by bypassing GitHub's CDN
 powershell -command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')"
 ```
 
+**What this script does:**
+- ✅ Installs all configured software packages in parallel
+- ✅ Automatically enables Remote Desktop (RDP)
+- ✅ Automatically applies Windows Dark Theme
+- ✅ Configures system for development/lab use
+
 ### Alternative Commands
 
 - **Standard Web Launcher** (may use cached versions):

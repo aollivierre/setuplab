@@ -350,23 +350,43 @@ else {
 }
 #endregion
 
-#region Configure Windows Terminal and Sysinternals
-# Configure Windows Terminal with custom profile and download Sysinternals
+#region Configure Windows Terminal
+# Configure Windows Terminal with custom profile
 Write-SetupLog "" -Level Info
-Write-SetupLog "Configuring Windows Terminal and downloading Sysinternals..." -Level Info
+Write-SetupLog "Configuring Windows Terminal..." -Level Info
 
-$configureScript = Join-Path $PSScriptRoot "Configure-WindowsTerminal.ps1"
-if (Test-Path $configureScript) {
+$configureTerminalScript = Join-Path $PSScriptRoot "Configure-WindowsTerminal.ps1"
+if (Test-Path $configureTerminalScript) {
     try {
-        & $configureScript
-        Write-SetupLog "Windows Terminal configuration and Sysinternals download completed" -Level Success
+        & $configureTerminalScript
+        Write-SetupLog "Windows Terminal configuration completed" -Level Success
     }
     catch {
-        Write-SetupLog "Configuration script failed: $_" -Level Error
+        Write-SetupLog "Windows Terminal configuration failed: $_" -Level Error
     }
 }
 else {
-    Write-SetupLog "Configuration script not found at: $configureScript" -Level Warning
+    Write-SetupLog "Windows Terminal configuration script not found at: $configureTerminalScript" -Level Warning
+}
+#endregion
+
+#region Download Sysinternals
+# Download and install Sysinternals Suite
+Write-SetupLog "" -Level Info
+Write-SetupLog "Downloading Sysinternals Suite..." -Level Info
+
+$sysinternalsScript = Join-Path $PSScriptRoot "Download-Sysinternals.ps1"
+if (Test-Path $sysinternalsScript) {
+    try {
+        & $sysinternalsScript
+        Write-SetupLog "Sysinternals download completed" -Level Success
+    }
+    catch {
+        Write-SetupLog "Sysinternals download failed: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Sysinternals download script not found at: $sysinternalsScript" -Level Warning
 }
 #endregion
 

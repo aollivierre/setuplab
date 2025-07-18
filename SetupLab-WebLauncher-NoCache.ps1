@@ -164,6 +164,11 @@ $filesToDownload = @(
         Url = "$BaseUrl/Terminal/LaunchPowerShellAsSystem.ps1"
         Required = $true
         SubDir = "Terminal"
+    },
+    @{
+        Name = "Download-Sysinternals.ps1"
+        Url = "$BaseUrl/Download-Sysinternals.ps1"
+        Required = $true
     }
 )
 

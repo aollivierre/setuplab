@@ -1,12 +1,12 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Configures Windows Terminal with custom profile and downloads Sysinternals tools
+    Configures Windows Terminal with custom profile
 .DESCRIPTION
     This script:
     1. Copies custom Windows Terminal settings.json to user profile
     2. Creates directory structure for LaunchPowerShellAsSystem.ps1
-    3. Downloads and extracts Sysinternals Suite
+    3. Copies LaunchPowerShellAsSystem.ps1 to the required location
 .EXAMPLE
     .\Configure-WindowsTerminal.ps1
 #>
@@ -16,8 +16,6 @@ param()
 
 #region Script Configuration
 $TerminalScriptPath = "C:\code\Terminal\WindowsPowerShellAsSYSTEM"
-$SysinternalsPath = "C:\code\sysinternals"
-$SysinternalsUrl = "https://download.sysinternals.com/files/SysinternalsSuite.zip"
 #endregion
 
 #region Functions
@@ -41,7 +39,7 @@ function Write-ConfigLog {
 
 #region Main Script
 try {
-    Write-ConfigLog "Starting Windows Terminal and Sysinternals configuration..." -Level Success
+    Write-ConfigLog "Starting Windows Terminal configuration..." -Level Success
     Write-ConfigLog ("=" * 60)
     
     # 1. Configure Windows Terminal settings
@@ -95,60 +93,6 @@ try {
         Write-ConfigLog "LaunchPowerShellAsSystem.ps1 not found at: $launchScriptSource" -Level Warning
     }
     
-    # 3. Download and extract Sysinternals Suite
-    Write-ConfigLog "Downloading Sysinternals Suite..." -Level Info
-    
-    # Create Sysinternals directory
-    if (-not (Test-Path $SysinternalsPath)) {
-        New-Item -ItemType Directory -Path $SysinternalsPath -Force | Out-Null
-        Write-ConfigLog "Created directory: $SysinternalsPath" -Level Success
-    }
-    
-    # Download Sysinternals Suite
-    $zipPath = Join-Path $env:TEMP "SysinternalsSuite.zip"
-    
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $ProgressPreference = 'SilentlyContinue'
-        
-        Write-ConfigLog "Downloading from: $SysinternalsUrl" -Level Info
-        Invoke-WebRequest -Uri $SysinternalsUrl -OutFile $zipPath -UseBasicParsing
-        
-        # Extract to Sysinternals directory
-        Write-ConfigLog "Extracting Sysinternals tools..." -Level Info
-        Expand-Archive -Path $zipPath -DestinationPath $SysinternalsPath -Force
-        
-        # Verify some key tools exist
-        $keyTools = @("ProcExp.exe", "ProcMon.exe", "PsExec.exe", "Handle.exe")
-        $foundTools = 0
-        
-        foreach ($tool in $keyTools) {
-            if (Test-Path (Join-Path $SysinternalsPath $tool)) {
-                $foundTools++
-            }
-        }
-        
-        if ($foundTools -gt 0) {
-            Write-ConfigLog "Sysinternals Suite extracted successfully ($foundTools key tools verified)" -Level Success
-            
-            # Add to PATH if not already there
-            $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-            if ($currentPath -notlike "*$SysinternalsPath*") {
-                [Environment]::SetEnvironmentVariable("Path", "$currentPath;$SysinternalsPath", "Machine")
-                Write-ConfigLog "Added Sysinternals to system PATH" -Level Success
-            }
-        }
-        else {
-            Write-ConfigLog "Sysinternals extraction may have failed - no key tools found" -Level Warning
-        }
-        
-        # Clean up zip file
-        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
-    }
-    catch {
-        Write-ConfigLog "Failed to download/extract Sysinternals: $_" -Level Error
-    }
-    
     Write-ConfigLog ("=" * 60)
     Write-ConfigLog "Configuration completed!" -Level Success
     
@@ -163,13 +107,6 @@ try {
     
     Write-Host "  - LaunchPowerShellAsSystem script: " -NoNewline
     if (Test-Path $launchScriptDest) {
-        Write-Host "Installed" -ForegroundColor Green
-    } else {
-        Write-Host "Not installed" -ForegroundColor Yellow
-    }
-    
-    Write-Host "  - Sysinternals Suite: " -NoNewline
-    if (Test-Path (Join-Path $SysinternalsPath "PsExec.exe")) {
         Write-Host "Installed" -ForegroundColor Green
     } else {
         Write-Host "Not installed" -ForegroundColor Yellow

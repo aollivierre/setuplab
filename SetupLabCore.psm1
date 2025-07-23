@@ -491,14 +491,17 @@ function Invoke-SetupInstaller {
         [string[]]$Arguments = @(),
         
         [Parameter(Mandatory = $false)]
-        [ValidateSet('MSI', 'EXE', 'MSIX', 'NPM', 'Auto')]
+        [ValidateSet('MSI', 'EXE', 'MSIX', 'NPM', 'CUSTOM', 'Auto')]
         [string]$InstallType = 'Auto',
         
         [Parameter(Mandatory = $false)]
         [string]$NpmPackage,
         
         [Parameter(Mandatory = $false)]
-        [string[]]$NpmInstallArgs = @()
+        [string[]]$NpmInstallArgs = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string]$CustomInstallScript
     )
     
     if ($InstallType -eq 'NPM') {
@@ -612,6 +615,25 @@ function Invoke-SetupInstaller {
         
         'EXE' {
             $process = Start-Process -FilePath $InstallerPath -ArgumentList $Arguments -Wait -PassThru
+        }
+        
+        'CUSTOM' {
+            if (-not $CustomInstallScript) {
+                throw "Custom install script path is required for CUSTOM install type"
+            }
+            
+            if (-not (Test-Path $CustomInstallScript)) {
+                throw "Custom install script not found: $CustomInstallScript"
+            }
+            
+            Write-SetupLog "Running custom install script: $CustomInstallScript" -Level Info
+            
+            try {
+                & $CustomInstallScript
+                return
+            } catch {
+                throw "Custom install script failed: $_"
+            }
         }
     }
     
@@ -772,6 +794,25 @@ function Start-ParallelInstallation {
                             Invoke-Expression $Installation.postInstallCommand
                         }
                     }
+                    elseif ($Installation.InstallType -eq 'CUSTOM') {
+                        # Handle custom install script
+                        if (-not $Installation.customInstallScript) {
+                            throw "Custom install script path is required for CUSTOM install type"
+                        }
+                        
+                        $scriptPath = if ([System.IO.Path]::IsPathRooted($Installation.customInstallScript)) {
+                            $Installation.customInstallScript
+                        } else {
+                            Join-Path (Split-Path -Parent $ModulePath) $Installation.customInstallScript
+                        }
+                        
+                        $installerParams = @{
+                            InstallType = 'CUSTOM'
+                            CustomInstallScript = $scriptPath
+                        }
+                        
+                        Invoke-SetupInstaller @installerParams
+                    }
                     else {
                         # Download installer
                         $installerPath = Join-Path $env:TEMP "$($Installation.Name)_installer$($Installation.InstallerExtension)"
@@ -781,8 +822,8 @@ function Start-ParallelInstallation {
                         Invoke-SetupInstaller -InstallerPath $installerPath -Arguments $Installation.InstallArguments -InstallType $Installation.InstallType
                     }
                     
-                    # Validate installation (skip for NPM packages without validation params)
-                    if ($Installation.InstallType -ne 'NPM' -or $Installation.RegistryName -or $Installation.ExecutablePath) {
+                    # Validate installation (skip for NPM/CUSTOM packages without validation params)
+                    if (($Installation.InstallType -ne 'NPM' -and $Installation.InstallType -ne 'CUSTOM') -or $Installation.RegistryName -or $Installation.ExecutablePath) {
                         $validationParams = @{
                             Name = $Installation.Name
                         }
@@ -811,11 +852,16 @@ function Start-ParallelInstallation {
                         }
                     }
                     else {
-                        # For NPM packages without validation, assume success
+                        # For NPM/CUSTOM packages without validation, assume success
+                        $message = if ($Installation.InstallType -eq 'NPM') { 
+                            "NPM package installed successfully" 
+                        } else { 
+                            "Custom installation completed successfully" 
+                        }
                         return @{
                             Success = $true
                             Name = $Installation.Name
-                            Message = "NPM package installed successfully"
+                            Message = $message
                         }
                     }
                 }

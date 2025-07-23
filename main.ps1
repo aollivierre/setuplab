@@ -184,31 +184,56 @@ Write-Host "Press any key to continue or CTRL+C to cancel..." -ForegroundColor Y
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 #endregion
 
-#region System Configuration (DNS, Rename, Domain Join, RDP)
+#region Early System Configuration (Dark Theme, RDP)
+Write-SetupLog "" -Level Info
+Write-SetupLog "Applying early system configurations..." -Level Info
+Write-SetupLog (("=" * 60)) -Level Info
+
+# 1. Apply Dark Theme First
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 1: Applying Windows Dark Theme..." -Level Info
+$themePath = Join-Path $PSScriptRoot "DarkTheme"
+if (Test-Path $themePath) {
+    try {
+        $themeScript = Get-ChildItem -Path $themePath -Filter "*.ps1" | Select-Object -First 1
+        if ($themeScript) {
+            & $themeScript.FullName -Mode dark -RestartExplorer $false
+            Write-SetupLog "Dark theme applied successfully" -Level Success
+        }
+        else {
+            Write-SetupLog "Dark theme script not found" -Level Warning
+        }
+    }
+    catch {
+        Write-SetupLog "Failed to apply dark theme: $_" -Level Error
+    }
+}
+else {
+    Write-SetupLog "Dark theme directory not found at: $themePath" -Level Warning
+}
+
+# 2. Enable Remote Desktop
+Write-SetupLog "" -Level Info
+Write-SetupLog "Step 2: Enabling Remote Desktop..." -Level Info
+try {
+    # Enable Remote Desktop
+    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    Write-SetupLog "Remote Desktop enabled successfully" -Level Success
+}
+catch {
+    Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
+}
+#endregion
+
+#region System Configuration (Rename, Domain Join)
 Write-SetupLog "" -Level Info
 Write-SetupLog "Starting system configuration..." -Level Info
 Write-SetupLog (("=" * 60)) -Level Info
 
-# 1. Configure DNS Servers
+# 1. Rename Computer
 Write-SetupLog "" -Level Info
-Write-SetupLog "Step 1: Configuring DNS servers..." -Level Info
-$dnsScript = Join-Path $PSScriptRoot "Set-DNSServers.ps1"
-if (Test-Path $dnsScript) {
-    try {
-        & $dnsScript
-        Write-SetupLog "DNS configuration completed" -Level Success
-    }
-    catch {
-        Write-SetupLog "DNS configuration failed: $_" -Level Error
-    }
-}
-else {
-    Write-SetupLog "DNS configuration script not found at: $dnsScript" -Level Warning
-}
-
-# 2. Rename Computer
-Write-SetupLog "" -Level Info
-Write-SetupLog "Step 2: Renaming computer..." -Level Info
+Write-SetupLog "Step 1: Renaming computer..." -Level Info
 $renameScript = Join-Path $PSScriptRoot "Rename-Computer.ps1"
 $needsReboot = $false
 if (Test-Path $renameScript) {
@@ -231,9 +256,9 @@ else {
     Write-SetupLog "Computer rename script not found at: $renameScript" -Level Warning
 }
 
-# 3. Join Domain
+# 2. Join Domain
 Write-SetupLog "" -Level Info
-Write-SetupLog "Step 3: Joining domain..." -Level Info
+Write-SetupLog "Step 2: Joining domain..." -Level Info
 $joinScript = Join-Path $PSScriptRoot "Join-Domain.ps1"
 if (Test-Path $joinScript) {
     try {
@@ -253,19 +278,6 @@ if (Test-Path $joinScript) {
 }
 else {
     Write-SetupLog "Domain join script not found at: $joinScript" -Level Warning
-}
-
-# 4. Enable Remote Desktop
-Write-SetupLog "" -Level Info
-Write-SetupLog "Step 4: Enabling Remote Desktop..." -Level Info
-try {
-    # Enable Remote Desktop
-    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-    Write-SetupLog "Remote Desktop enabled successfully" -Level Success
-}
-catch {
-    Write-SetupLog "Failed to enable Remote Desktop: $_" -Level Error
 }
 
 Write-SetupLog "" -Level Info
@@ -324,31 +336,6 @@ if ($installationResult.Failed.Count -gt 0) {
 }
 #endregion
 
-#region Windows Theme Configuration
-# Always apply Dark Theme
-$themePath = Join-Path $PSScriptRoot "DarkTheme"
-if (Test-Path $themePath) {
-    Write-SetupLog "" -Level Info
-    Write-SetupLog "Applying Windows Dark Theme automatically..." -Level Info
-    
-    try {
-        $themeScript = Get-ChildItem -Path $themePath -Filter "*.ps1" | Select-Object -First 1
-        if ($themeScript) {
-            & $themeScript.FullName -Mode dark -RestartExplorer $false
-            Write-SetupLog "Dark theme applied successfully" -Level Success
-        }
-        else {
-            Write-SetupLog "Dark theme script not found" -Level Warning
-        }
-    }
-    catch {
-        Write-SetupLog "Failed to apply dark theme: $_" -Level Error
-    }
-}
-else {
-    Write-SetupLog "Dark theme directory not found at: $themePath" -Level Warning
-}
-#endregion
 
 #region Configure Windows Terminal
 # Configure Windows Terminal with custom profile

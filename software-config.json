@@ -196,6 +196,19 @@
       "category": "Browsers"
     },
     {
+      "name": "Claude CLI",
+      "enabled": true,
+      "registryName": null,
+      "executablePath": "C:\\Users\\%USERNAME%\\AppData\\Roaming\\npm\\claude.cmd",
+      "downloadUrl": null,
+      "installerExtension": null,
+      "installType": "CUSTOM",
+      "installArguments": [],
+      "minimumVersion": null,
+      "category": "Development",
+      "customInstallScript": "install-claude-cli.ps1"
+    },
+    {
       "name": "Warp Terminal",
       "enabled": true,
       "registryName": "Warp",

@@ -317,49 +317,13 @@ else {
 
 Write-SetupLog "" -Level Info
 Write-SetupLog (("=" * 60)) -Level Info
-
-# Check if reboot is needed before continuing
-if ($needsReboot) {
-    Write-SetupLog "" -Level Warning
-    Write-SetupLog "IMPORTANT: A system reboot is required!" -Level Warning
-    Write-SetupLog "The computer name was changed and/or domain join was performed." -Level Warning
-    Write-SetupLog "Please reboot before installing applications." -Level Warning
-    Write-SetupLog "" -Level Warning
-    
-    Write-Host ""
-    Write-Host "SYSTEM REBOOT REQUIRED!" -ForegroundColor Red -BackgroundColor Yellow
-    Write-Host ""
-    Write-Host "The following changes require a reboot:" -ForegroundColor Yellow
-    Write-Host "  - Computer rename" -ForegroundColor Yellow
-    Write-Host "  - Domain join" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "It is strongly recommended to reboot before installing applications." -ForegroundColor Yellow
-    Write-Host ""
-    
-    $rebootResponse = Read-Host "Do you want to reboot now? (Y/N)"
-    if ($rebootResponse -eq 'Y' -or $rebootResponse -eq 'y') {
-        Write-SetupLog "User chose to reboot. Restarting in 10 seconds..." -Level Warning
-        Write-Host "Restarting computer in 10 seconds..." -ForegroundColor Yellow
-        Write-Host "Run this script again after reboot to install applications." -ForegroundColor Cyan
-        Start-Sleep -Seconds 10
-        Restart-Computer -Force
-        exit
-    }
-    else {
-        Write-SetupLog "User chose to continue without reboot - NOT RECOMMENDED" -Level Warning
-        Write-Host ""
-        Write-Host "WARNING: Continuing without reboot may cause installation issues!" -ForegroundColor Red
-        Write-Host "Press any key to continue anyway..." -ForegroundColor Yellow
-        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    }
-}
 #endregion
 
-#region Parallel Installation
+#region Serial Installation
 Write-SetupLog "" -Level Info
-Write-SetupLog "Starting parallel installation process..." -Level Info
+Write-SetupLog "Starting serial installation process..." -Level Info
 
-$installationResult = Start-ParallelInstallation -Installations $allSoftware -MaxConcurrency $MaxConcurrency -SkipValidation:$SkipValidation
+$installationResult = Start-SerialInstallation -Installations $allSoftware -SkipValidation:$SkipValidation
 
 # Detailed results
 if ($installationResult.Failed.Count -gt 0) {
@@ -507,6 +471,38 @@ if ($installationResult.Completed.Count -gt 0) {
 
 Write-SetupLog "" -Level Info
 Write-SetupLog "Setup completed. Check the summary report for details." -Level Success
+
+#region Check for Required Reboot
+if ($needsReboot) {
+    Write-SetupLog "" -Level Warning
+    Write-SetupLog "IMPORTANT: A system reboot is required!" -Level Warning
+    Write-SetupLog "The computer name was changed and/or domain join was performed." -Level Warning
+    Write-SetupLog "" -Level Warning
+    
+    Write-Host ""
+    Write-Host "SYSTEM REBOOT REQUIRED!" -ForegroundColor Red -BackgroundColor Yellow
+    Write-Host ""
+    Write-Host "The following changes require a reboot:" -ForegroundColor Yellow
+    Write-Host "  - Computer rename and/or Domain join" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "All software has been installed successfully." -ForegroundColor Green
+    Write-Host ""
+    
+    $rebootResponse = Read-Host "Do you want to reboot now? (Y/N)"
+    if ($rebootResponse -eq 'Y' -or $rebootResponse -eq 'y') {
+        Write-SetupLog "User chose to reboot. Restarting in 10 seconds..." -Level Warning
+        Write-Host "Restarting computer in 10 seconds..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 10
+        Restart-Computer -Force
+        exit
+    }
+    else {
+        Write-SetupLog "User chose not to reboot" -Level Warning
+        Write-Host ""
+        Write-Host "Remember to reboot your system to complete the configuration." -ForegroundColor Yellow
+    }
+}
+#endregion
 
 # Keep window open if running in a new process
 if ($Host.Name -eq 'ConsoleHost') {

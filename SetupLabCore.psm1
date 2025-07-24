@@ -945,6 +945,172 @@ function Start-ParallelInstallation {
         Skipped = $skipped
     }
 }
+
+function Start-SerialInstallation {
+    <#
+    .SYNOPSIS
+        Manages serial installation of multiple software packages
+    .DESCRIPTION
+        Installs packages one by one in sequence for better stability
+    .PARAMETER Installations
+        Array of installation configurations
+    .PARAMETER SkipValidation
+        Skip pre-installation validation checks
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Installations,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipValidation
+    )
+    
+    $completed = @()
+    $failed = @()
+    $skipped = @()
+    $totalCount = $Installations.Count
+    $currentIndex = 0
+    
+    Write-SetupLog "Starting serial installation of $totalCount packages" -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
+    
+    foreach ($installation in $Installations) {
+        $currentIndex++
+        $progressPercent = [int](($currentIndex / $totalCount) * 100)
+        
+        Write-SetupLog "" -Level Info
+        Write-SetupLog "[$currentIndex/$totalCount] Installing: $($installation.Name)" -Level Info
+        Write-Progress -Activity "Installing Software" -Status "$($installation.Name)" -PercentComplete $progressPercent
+        
+        # Skip if validation enabled and already installed
+        if (-not $SkipValidation) {
+            $validationParams = @{
+                Name = $installation.Name
+            }
+            
+            if ($installation.RegistryName) {
+                $validationParams['RegistryName'] = $installation.RegistryName
+            }
+            
+            if ($installation.ExecutablePath) {
+                $validationParams['ExecutablePath'] = $installation.ExecutablePath
+            }
+            
+            if ($installation.MinimumVersion) {
+                $validationParams['MinimumVersion'] = $installation.MinimumVersion
+            }
+            
+            if (Test-SoftwareInstalled @validationParams) {
+                Write-SetupLog "$($installation.Name) is already installed - skipping" -Level Info
+                $skipped += $installation
+                continue
+            }
+        }
+        
+        try {
+            if ($installation.InstallType -eq 'NPM') {
+                # Handle NPM package installation
+                $installerParams = @{
+                    InstallType = 'NPM'
+                    NpmPackage = $installation.npmPackage
+                }
+                
+                if ($installation.npmInstallArgs) {
+                    $installerParams['NpmInstallArgs'] = $installation.npmInstallArgs
+                }
+                
+                Invoke-SetupInstaller @installerParams
+                
+                # Run post-install command if provided
+                if ($installation.postInstallCommand) {
+                    Write-SetupLog "Running post-install command: $($installation.postInstallCommand)" -Level Debug
+                    Invoke-Expression $installation.postInstallCommand
+                }
+            }
+            elseif ($installation.InstallType -eq 'CUSTOM') {
+                # Handle custom install script
+                if (-not $installation.customInstallScript) {
+                    throw "Custom install script path is required for CUSTOM install type"
+                }
+                
+                $scriptPath = if ([System.IO.Path]::IsPathRooted($installation.customInstallScript)) {
+                    $installation.customInstallScript
+                } else {
+                    Join-Path $PSScriptRoot $installation.customInstallScript
+                }
+                
+                $installerParams = @{
+                    InstallType = 'CUSTOM'
+                    CustomInstallScript = $scriptPath
+                }
+                
+                Invoke-SetupInstaller @installerParams
+            }
+            else {
+                # Download installer
+                $installerPath = Join-Path $env:TEMP "$($installation.Name)_installer$($installation.InstallerExtension)"
+                Write-SetupLog "Downloading installer to: $installerPath" -Level Debug
+                Start-SetupDownload -Url $installation.DownloadUrl -Destination $installerPath
+                
+                # Run installer
+                Invoke-SetupInstaller -InstallerPath $installerPath -Arguments $installation.InstallArguments -InstallType $installation.InstallType
+            }
+            
+            # Validate installation (skip for NPM/CUSTOM packages without validation params)
+            if (($installation.InstallType -ne 'NPM' -and $installation.InstallType -ne 'CUSTOM') -or $installation.RegistryName -or $installation.ExecutablePath) {
+                $validationParams = @{
+                    Name = $installation.Name
+                }
+                
+                if ($installation.RegistryName) {
+                    $validationParams['RegistryName'] = $installation.RegistryName
+                }
+                
+                if ($installation.ExecutablePath) {
+                    $validationParams['ExecutablePath'] = $installation.ExecutablePath
+                }
+                
+                if ($installation.MinimumVersion) {
+                    $validationParams['MinimumVersion'] = $installation.MinimumVersion
+                }
+                
+                if (Test-SoftwareInstalled @validationParams) {
+                    Write-SetupLog "$($installation.Name) installed successfully" -Level Success
+                    $completed += $installation
+                }
+                else {
+                    throw "Post-installation validation failed"
+                }
+            }
+            else {
+                # For NPM/CUSTOM packages without validation, assume success
+                Write-SetupLog "$($installation.Name) installation completed" -Level Success
+                $completed += $installation
+            }
+        }
+        catch {
+            Write-SetupLog "Failed to install $($installation.Name): $_" -Level Error
+            $failed += $installation
+        }
+    }
+    
+    Write-Progress -Activity "Installing Software" -Completed
+    
+    Write-SetupLog "" -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
+    Write-SetupLog "Installation Summary:" -Level Info
+    Write-SetupLog "  Completed: $($completed.Count)" -Level Success
+    Write-SetupLog "  Failed: $($failed.Count)" -Level $(if ($failed.Count -gt 0) { 'Error' } else { 'Info' })
+    Write-SetupLog "  Skipped: $($skipped.Count)" -Level Info
+    Write-SetupLog (("=" * 60)) -Level Info
+    
+    return @{
+        Completed = $completed
+        Failed = $failed
+        Skipped = $skipped
+    }
+}
 #endregion
 
 #region Export Module Members
@@ -957,6 +1123,7 @@ Export-ModuleMember -Function @(
     'Get-InstalledSoftwareVersion',
     'Invoke-SetupInstaller',
     'Get-SoftwareConfiguration',
-    'Start-ParallelInstallation'
+    'Start-ParallelInstallation',
+    'Start-SerialInstallation'
 )
 #endregion

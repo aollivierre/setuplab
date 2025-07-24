@@ -1,10 +1,11 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Downloads and extracts the Sysinternals Suite to C:\code\sysinternals
+    Downloads and extracts the Sysinternals Suite to Public Desktop
 .DESCRIPTION
     This script downloads the complete Sysinternals Suite from Microsoft,
-    extracts it to C:\code\sysinternals, and adds the directory to the system PATH
+    extracts it to the Public Desktop (C:\Users\Public\Desktop\Sysinternals),
+    making it available for all users, and adds the directory to the system PATH
 .EXAMPLE
     .\Download-Sysinternals.ps1
 #>
@@ -13,7 +14,8 @@
 param()
 
 #region Script Configuration
-$SysinternalsPath = "C:\code\sysinternals"
+$PublicDesktop = [Environment]::GetFolderPath('CommonDesktopDirectory')
+$SysinternalsPath = Join-Path $PublicDesktop "Sysinternals"
 $SysinternalsUrl = "https://download.sysinternals.com/files/SysinternalsSuite.zip"
 #endregion
 
@@ -138,12 +140,14 @@ try {
         Write-SysinternalsLog ("=" * 60)
         Write-SysinternalsLog "Sysinternals Suite installation completed!" -Level Success
         Write-SysinternalsLog "`nInstallation location: $SysinternalsPath" -Level Info
+        Write-SysinternalsLog "Available on Public Desktop for all users" -Level Success
         
         $toolCount = (Get-ChildItem $SysinternalsPath -Filter "*.exe" -ErrorAction SilentlyContinue).Count
         Write-SysinternalsLog "Total tools installed: $toolCount" -Level Info
         
         Write-SysinternalsLog "`nYou can now run Sysinternals tools from any command prompt!" -Level Success
         Write-SysinternalsLog "Example: procexp, procmon, psexec, handle, autoruns" -Level Info
+        Write-SysinternalsLog "`nAll users can access the tools from their Desktop" -Level Info
     }
     catch {
         Write-SysinternalsLog "Failed to download/extract Sysinternals: $_" -Level Error

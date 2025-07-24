@@ -54,6 +54,17 @@ param(
 )
 
 #region Script Initialization
+# Set execution policy for this process to avoid script execution issues
+if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {
+    try {
+        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+        Write-Host "Execution policy set to Bypass for current process" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "WARNING: Could not set execution policy: $_" -ForegroundColor Yellow
+    }
+}
+
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
 
@@ -154,7 +165,31 @@ if (-not (Test-AdminPrivileges)) {
     if ($Software.Count -gt 0) { $elevationParams['Software'] = $Software }
     if ($PSBoundParameters.ContainsKey('ConfigFile')) { $elevationParams['ConfigFile'] = $ConfigFile }
     
-    Request-AdminElevation -ScriptPath $PSCommandPath -Parameters $elevationParams
+    # Request elevation with ExecutionPolicy Bypass
+    $scriptArgs = @(
+        "-ExecutionPolicy", "Bypass",
+        "-NoProfile",
+        "-File", "`"$PSCommandPath`""
+    )
+    
+    # Add original parameters
+    foreach ($key in $elevationParams.Keys) {
+        if ($elevationParams[$key] -is [bool]) {
+            if ($elevationParams[$key]) {
+                $scriptArgs += "-$key"
+            }
+        }
+        elseif ($elevationParams[$key] -is [array]) {
+            $scriptArgs += "-$key"
+            $scriptArgs += ($elevationParams[$key] -join ',')
+        }
+        else {
+            $scriptArgs += "-$key"
+            $scriptArgs += $elevationParams[$key]
+        }
+    }
+    
+    Start-Process -FilePath "powershell.exe" -ArgumentList $scriptArgs -Verb RunAs -Wait
     exit 0
 }
 

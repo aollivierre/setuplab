@@ -12,7 +12,9 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git config:*)",
-      "Bash(claude --version)"
+      "Bash(claude --version)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

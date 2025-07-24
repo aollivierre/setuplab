@@ -3,12 +3,12 @@
 .SYNOPSIS
     Main orchestrator script for SetupLab - Automated Lab Environment Setup
 .DESCRIPTION
-    This script orchestrates the installation of multiple software packages in parallel
+    This script orchestrates the installation of multiple software packages serially
     using a modular approach with shared functions and configuration-driven installation.
 .PARAMETER SkipValidation
     Skip pre-installation validation checks and install all enabled software
 .PARAMETER MaxConcurrency
-    Maximum number of concurrent installations (default: 4)
+    [Deprecated] This parameter is kept for compatibility but has no effect in serial mode
 .PARAMETER Categories
     Comma-separated list of categories to install (default: all enabled categories)
 .PARAMETER Software

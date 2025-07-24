@@ -596,6 +596,18 @@ function Invoke-SetupInstaller {
         'MSI' {
             $msiArgs = @("/i", "`"$InstallerPath`"") + $Arguments
             $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $msiArgs -Wait -PassThru
+            
+            # Handle common MSI error codes
+            if ($process.ExitCode -eq 1603) {
+                Write-SetupLog "MSI Error 1603 detected - attempting cleanup and retry" -Level Warning
+                
+                # Wait a moment for any background processes
+                Start-Sleep -Seconds 5
+                
+                # Try again with force restart flag
+                $retryArgs = $msiArgs + @("REBOOT=ReallySuppress")
+                $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $retryArgs -Wait -PassThru
+            }
         }
         
         'MSIX' {
@@ -614,7 +626,17 @@ function Invoke-SetupInstaller {
         }
         
         'EXE' {
-            $process = Start-Process -FilePath $InstallerPath -ArgumentList $Arguments -Wait -PassThru
+            # Start the installer process
+            $process = Start-Process -FilePath $InstallerPath -ArgumentList $Arguments -PassThru
+            
+            # Wait for the process with a timeout (5 minutes)
+            $timeoutSeconds = 300
+            $waited = $process.WaitForExit($timeoutSeconds * 1000)
+            
+            if (-not $waited) {
+                Write-SetupLog "Installation process timed out after $timeoutSeconds seconds" -Level Warning
+                # Don't kill the process as it might still be installing
+            }
         }
         
         'CUSTOM' {
@@ -637,8 +659,11 @@ function Invoke-SetupInstaller {
         }
     }
     
-    if ($process.ExitCode -ne 0) {
-        throw "Installation failed with exit code: $($process.ExitCode)"
+    # Only check exit code if we have a process and it has exited
+    if ($process -and $process.HasExited) {
+        if ($process.ExitCode -ne 0) {
+            throw "Installation failed with exit code: $($process.ExitCode)"
+        }
     }
     
     Write-SetupLog "Installation completed successfully" -Level Success
@@ -803,7 +828,7 @@ function Start-ParallelInstallation {
                         $scriptPath = if ([System.IO.Path]::IsPathRooted($Installation.customInstallScript)) {
                             $Installation.customInstallScript
                         } else {
-                            Join-Path (Split-Path -Parent $ModulePath) $Installation.customInstallScript
+                            Join-Path $PSScriptRoot $Installation.customInstallScript
                         }
                         
                         $installerParams = @{

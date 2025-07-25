@@ -14,7 +14,10 @@
       "Bash(git config:*)",
       "Bash(claude --version)",
       "Bash(git merge:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(od:*)",
+      "Bash(python:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }

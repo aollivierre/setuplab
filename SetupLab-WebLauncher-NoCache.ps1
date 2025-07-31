@@ -72,9 +72,9 @@ foreach ($file in $filesToDownload) {
         
         # Add timestamp to URL
         $cacheBustUrl = if ($fileUrl.Contains("?")) { 
-            "$fileUrl&cb=$timestamp" 
+            "${fileUrl}&cb=${timestamp}" 
         } else { 
-            "$fileUrl?cb=$timestamp" 
+            "${fileUrl}?cb=${timestamp}" 
         }
         
         $webClient.DownloadFile($cacheBustUrl, $fileDest)

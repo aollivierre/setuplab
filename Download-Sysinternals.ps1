@@ -97,11 +97,11 @@ try {
         foreach ($tool in $keyTools) {
             $toolPath = Join-Path $SysinternalsPath $tool.Name
             if (Test-Path $toolPath) {
-                Write-SysinternalsLog "  ✓ $($tool.Description) ($($tool.Name))" -Level Success
+                Write-SysinternalsLog "  [OK] $($tool.Description) ($($tool.Name))" -Level Success
                 $foundTools++
             }
             else {
-                Write-SysinternalsLog "  ✗ $($tool.Description) ($($tool.Name))" -Level Warning
+                Write-SysinternalsLog "  [X] $($tool.Description) ($($tool.Name))" -Level Warning
             }
         }
         

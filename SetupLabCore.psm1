@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Core module for SetupLab containing shared functions and utilities
@@ -669,7 +669,16 @@ function Invoke-SetupInstaller {
     # Only check exit code if we have a process and it has exited
     if ($process -and $process.HasExited) {
         if ($process.ExitCode -ne 0) {
-            throw "Installation failed with exit code: $($process.ExitCode)"
+            # For MSI installs, check if software was actually installed despite error code
+            if ($InstallType -eq 'MSI' -and ($process.ExitCode -eq 1603 -or $process.ExitCode -eq 3010)) {
+                Write-SetupLog "MSI returned code $($process.ExitCode), checking if software was installed..." -Level Warning
+                # Give it a moment to complete
+                Start-Sleep -Seconds 2
+                # Don't throw error yet - let the validation check handle it
+            }
+            else {
+                throw "Installation failed with exit code: $($process.ExitCode)"
+            }
         }
     }
     
@@ -1159,3 +1168,4 @@ Export-ModuleMember -Function @(
     'Start-SerialInstallation'
 )
 #endregion
+

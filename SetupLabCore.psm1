@@ -24,6 +24,13 @@ if (-not (Test-Path $script:TempPath)) {
 }
 #endregion
 
+# Import enhanced logging module
+$loggingModulePath = Join-Path $PSScriptRoot "SetupLabLogging.psm1"
+if (Test-Path $loggingModulePath) {
+    Import-Module $loggingModulePath -Force
+    Initialize-SetupLog -LogName "SetupLab"
+}
+
 #region Logging Functions
 function Write-SetupLog {
     [CmdletBinding()]

@@ -96,10 +96,6 @@ All installations are logged to `C:\ProgramData\SetupLab\Logs` with:
 - Success/failure status for each app
 - Complete error details
 
-
-
-
-
 ## 🛠️ Troubleshooting
 
 ### Known Issues and Solutions

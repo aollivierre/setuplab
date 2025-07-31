@@ -45,9 +45,13 @@ Write-Host "npm global directory: $npmGlobalDir" -ForegroundColor Gray
 
 # Check if already in PATH
 $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if (-not $currentPath) {
+    $currentPath = ""
+}
+
 if ($currentPath -notlike "*$npmGlobalDir*") {
     # Add to PATH
-    $newPath = "$currentPath;$npmGlobalDir"
+    $newPath = if ($currentPath) { "$currentPath;$npmGlobalDir" } else { $npmGlobalDir }
     [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
     Write-Host "Added $npmGlobalDir to user PATH" -ForegroundColor Green
     

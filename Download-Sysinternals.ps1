@@ -125,7 +125,9 @@ try {
             Write-SysinternalsLog "Sysinternals added to system PATH" -Level Success
             
             # Update current session PATH
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $env:Path = "$machinePath;$userPath"
             Write-SysinternalsLog "Current session PATH updated" -Level Success
         }
         else {
@@ -161,7 +163,7 @@ try {
     }
 }
 catch {
-    Write-SysinternalsLog "Error occurred: $_" -Level Error
+    Write-SysinternalsLog "Error occurred: $($_.Exception.Message)" -Level Error
     Write-SysinternalsLog $_.Exception.Message -Level Error
     exit 1
 }

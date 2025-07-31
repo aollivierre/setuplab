@@ -6,6 +6,12 @@
     This version adds timestamp parameters to all downloads to bypass GitHub CDN caching
 #>
 
+# Set execution policy for current process
+if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {
+    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+    Write-Host "Execution policy set to Bypass for current process" -ForegroundColor Green
+}
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
@@ -123,6 +129,11 @@ $filesToDownload = @(
         Required = $true
     },
     @{
+        Name = "SetupLabLogging.psm1"
+        Url = "$BaseUrl/SetupLabLogging.psm1"
+        Required = $true
+    },
+    @{
         Name = $ConfigFile
         Url = "$BaseUrl/$ConfigFile"
         Required = $true
@@ -169,6 +180,11 @@ $filesToDownload = @(
         Name = "Download-Sysinternals.ps1"
         Url = "$BaseUrl/Download-Sysinternals.ps1"
         Required = $true
+    },
+    @{
+        Name = "install-claude-cli.ps1"
+        Url = "$BaseUrl/install-claude-cli.ps1"
+        Required = $false
     }
 )
 

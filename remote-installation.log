@@ -1,0 +1,112 @@
+﻿[2025-07-31 15:00:53] [Info] SetupLab - Automated Lab Environment Setup
+[2025-07-31 15:00:53] [Info] ============================================================
+[2025-07-31 15:00:53] [Debug] Loaded configuration from: C:\SetupLab\software-config.json
+[2025-07-31 15:00:53] [Success] Loaded configuration from: C:\SetupLab\software-config.json
+[2025-07-31 15:00:53] [Success] Running with administrator privileges
+
+[2025-07-31 15:00:53] [Info] Installation Summary:
+[2025-07-31 15:00:53] [Info]   Total packages: 16
+[2025-07-31 15:00:53] [Info]   Skip validation: True
+[2025-07-31 15:00:53] [Info]   Max concurrency: 4
+
+[2025-07-31 15:00:53] [Info] Software to install:
+[2025-07-31 15:00:53] [Info]   [Browsers] Google Chrome
+[2025-07-31 15:00:53] [Info]   [Browsers] Mozilla Firefox
+[2025-07-31 15:00:53] [Info]   [Development] Claude CLI
+[2025-07-31 15:00:53] [Info]   [Development] Git
+[2025-07-31 15:00:53] [Info]   [Development] GitHub CLI
+[2025-07-31 15:00:53] [Info]   [Development] GitHub Desktop
+[2025-07-31 15:00:53] [Info]   [Development] Node.js
+[2025-07-31 15:00:53] [Info]   [Development] PowerShell 7
+[2025-07-31 15:00:53] [Info]   [Development] Visual Studio Code
+[2025-07-31 15:00:53] [Info]   [Runtime] Visual C++ Redistributables
+[2025-07-31 15:00:53] [Info]   [Utilities] 7-Zip
+[2025-07-31 15:00:53] [Info]   [Utilities] Everything
+[2025-07-31 15:00:53] [Info]   [Utilities] FileLocator Pro
+[2025-07-31 15:00:53] [Info]   [Utilities] ShareX
+[2025-07-31 15:00:53] [Info]   [Utilities] Warp Terminal
+[2025-07-31 15:00:53] [Info]   [Utilities] Windows Terminal
+
+
+[2025-07-31 15:00:53] [Info] Applying early system configurations...
+[2025-07-31 15:00:53] [Info] ============================================================
+
+[2025-07-31 15:00:53] [Info] Step 1: Applying Windows Dark Theme...
+[2025-07-31 15:00:53] [Success] Dark theme applied successfully
+
+[2025-07-31 15:00:53] [Info] Step 2: Enabling Remote Desktop...
+[2025-07-31 15:00:57] [Success] Remote Desktop enabled successfully
+
+[2025-07-31 15:00:57] [Info] Starting system configuration...
+[2025-07-31 15:00:57] [Info] ============================================================
+
+[2025-07-31 15:00:57] [Info] Step 1: Renaming computer...
+[2025-07-31 15:00:57] [Info] Computer already has the correct name or rename skipped
+
+[2025-07-31 15:00:57] [Info] Step 2: Joining domain...
+[2025-07-31 15:00:57] [Info] Computer already domain joined or join skipped
+
+[2025-07-31 15:00:57] [Info] ============================================================
+
+[2025-07-31 15:00:57] [Info] Starting serial installation process...
+[2025-07-31 15:00:57] [Info] Starting serial installation of 16 packages
+[2025-07-31 15:00:57] [Info] ============================================================
+
+[2025-07-31 15:00:57] [Info] [1/16] Installing: 7-Zip
+[2025-07-31 15:00:57] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\7-Zip_installer.msi
+[2025-07-31 15:00:57] [Info] Download attempt 1 of 3 for: https://www.7-zip.org/a/7z2500-x64.msi
+[2025-07-31 15:00:59] [Success] Download completed using BITS
+[2025-07-31 15:00:59] [Info] Installing using MSI method
+[2025-07-31 15:01:01] [Success] Installation completed successfully
+[2025-07-31 15:01:01] [Success] 7-Zip found at: C:\Program Files\7-Zip\7z.exe
+[2025-07-31 15:01:01] [Success] 7-Zip installed successfully
+
+[2025-07-31 15:01:01] [Info] [2/16] Installing: Git
+[2025-07-31 15:01:01] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\Git_installer.exe
+[2025-07-31 15:01:01] [Info] Download attempt 1 of 3 for: https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/Git-2.50.1-64-bit.exe
+[2025-07-31 15:01:03] [Success] Download completed using BITS
+[2025-07-31 15:01:03] [Info] Installing using EXE method
+[2025-07-31 15:01:24] [Success] Installation completed successfully
+[2025-07-31 15:01:24] [Success] Git version 2.50.1 found (meets minimum 2.40.0)
+[2025-07-31 15:01:24] [Success] Git installed successfully
+
+[2025-07-31 15:01:24] [Info] [3/16] Installing: Visual Studio Code
+[2025-07-31 15:01:24] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\Visual Studio Code_installer.exe
+[2025-07-31 15:01:24] [Info] Download attempt 1 of 3 for: https://code.visualstudio.com/sha/download?build=stable&os=win32-x64
+[2025-07-31 15:01:27] [Success] Download completed using BITS
+[2025-07-31 15:01:27] [Info] Installing using EXE method
+[2025-07-31 15:01:43] [Success] Installation completed successfully
+[2025-07-31 15:01:43] [Success] Visual Studio Code found at: C:\Program Files\Microsoft VS Code\Code.exe
+[2025-07-31 15:01:43] [Success] Visual Studio Code installed successfully
+
+[2025-07-31 15:01:43] [Info] [4/16] Installing: Node.js
+[2025-07-31 15:01:43] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\Node.js_installer.msi
+[2025-07-31 15:01:43] [Info] Download attempt 1 of 3 for: https://nodejs.org/dist/v22.17.1/node-v22.17.1-x64.msi
+[2025-07-31 15:01:44] [Success] Download completed using BITS
+[2025-07-31 15:01:44] [Info] Installing using MSI method
+[2025-07-31 15:01:46] [Warning] MSI Error 1603 detected - attempting cleanup and retry
+[2025-07-31 15:01:52] [Error] Failed to install Node.js: Installation failed with exit code: 1603
+
+[2025-07-31 15:01:52] [Info] [5/16] Installing: GitHub Desktop
+[2025-07-31 15:01:52] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\GitHub Desktop_installer.exe
+[2025-07-31 15:01:52] [Info] Download attempt 1 of 3 for: https://central.github.com/deployments/desktop/desktop/latest/win32
+[2025-07-31 15:01:55] [Success] Download completed using BITS
+[2025-07-31 15:01:55] [Info] Installing using EXE method
+[2025-07-31 15:02:10] [Success] Installation completed successfully
+[2025-07-31 15:02:11] [Success] GitHub Desktop found in registry
+[2025-07-31 15:02:11] [Success] GitHub Desktop installed successfully
+
+[2025-07-31 15:02:11] [Info] [6/16] Installing: GitHub CLI
+[2025-07-31 15:02:11] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\GitHub CLI_installer.msi
+[2025-07-31 15:02:11] [Info] Download attempt 1 of 3 for: https://github.com/cli/cli/releases/download/v2.75.1/gh_2.75.1_windows_amd64.msi
+[2025-07-31 15:02:12] [Success] Download completed using BITS
+[2025-07-31 15:02:12] [Info] Installing using MSI method
+[2025-07-31 15:02:14] [Success] Installation completed successfully
+[2025-07-31 15:02:14] [Success] GitHub CLI found at: C:\Program Files\GitHub CLI\gh.exe
+[2025-07-31 15:02:14] [Success] GitHub CLI installed successfully
+
+[2025-07-31 15:02:14] [Info] [7/16] Installing: PowerShell 7
+[2025-07-31 15:02:14] [Debug] Downloading installer to: C:\Users\ADMINI~1\AppData\Local\Temp\PowerShell 7_installer.msi
+[2025-07-31 15:02:14] [Info] Download attempt 1 of 3 for: https://github.com/PowerShell/PowerShell/releases/download/v7.5.2/PowerShell-7.5.2-win-x64.msi
+[2025-07-31 15:02:16] [Success] Download completed using BITS
+[2025-07-31 15:02:16] [Info] Installing using MSI method

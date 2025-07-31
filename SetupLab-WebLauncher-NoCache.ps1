@@ -1,10 +1,15 @@
-#Requires -Version 5.1
-<#
-.SYNOPSIS
-    Cache-busting version of SetupLab Web Launcher
-.DESCRIPTION
-    This version adds timestamp parameters to all downloads to bypass GitHub CDN caching
-#>
+# Simple SetupLab Web Launcher - Compatible with iex/irm execution
+# No CmdletBinding or advanced parameter attributes for compatibility
+
+param(
+    $BaseUrl = "https://raw.githubusercontent.com/aollivierre/setuplab/main",
+    $SkipValidation = $false,
+    $MaxConcurrency = 4,
+    $Categories = @(),
+    $Software = @(),
+    $ListSoftware = $false,
+    $ConfigFile = "software-config.json"
+)
 
 # Set execution policy for current process
 if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {
@@ -12,37 +17,9 @@ if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {
     Write-Host "Execution policy set to Bypass for current process" -ForegroundColor Green
 }
 
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory = $false)]
-    [string]$BaseUrl = "https://raw.githubusercontent.com/aollivierre/setuplab/main",
-    
-    [Parameter(Mandatory = $false)]
-    [switch]$SkipValidation,
-    
-    [Parameter(Mandatory = $false)]
-    [ValidateRange(1, 10)]
-    [int]$MaxConcurrency = 4,
-    
-    [Parameter(Mandatory = $false)]
-    [string[]]$Categories = @(),
-    
-    [Parameter(Mandatory = $false)]
-    [string[]]$Software = @(),
-    
-    [Parameter(Mandatory = $false)]
-    [switch]$ListSoftware,
-    
-    [Parameter(Mandatory = $false)]
-    [string]$ConfigFile = "software-config.json"
-)
-
 #region Functions
 function Write-WebLog {
-    param(
-        [string]$Message,
-        [string]$Level = "Info"
-    )
+    param($Message, $Level = "Info")
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $color = switch ($Level) {
@@ -57,10 +34,7 @@ function Write-WebLog {
 }
 
 function Download-File {
-    param(
-        [string]$Url,
-        [string]$OutputPath
-    )
+    param($Url, $OutputPath)
     
     try {
         Write-WebLog "Downloading: $Url" -Level Info
@@ -98,8 +72,8 @@ function Download-File {
 #endregion
 
 #region Main Execution
-Write-WebLog "SetupLab Web Launcher (Cache-Busting Version)" -Level Info
-Write-WebLog (("=" * 60)) -Level Info
+Write-WebLog "SetupLab Web Launcher (Simple Version)" -Level Info
+Write-WebLog ("=" * 60) -Level Info
 
 # Ensure BaseUrl doesn't end with a slash
 $BaseUrl = $BaseUrl.TrimEnd('/')
@@ -222,19 +196,19 @@ if (-not $downloadSuccess) {
 }
 
 Write-WebLog "" -Level Info
-Write-WebLog "All required files downloaded successfully (cache-busted)" -Level Success
+Write-WebLog "All required files downloaded successfully" -Level Success
 Write-WebLog "" -Level Info
 
 # Build parameters for main.ps1
 $mainScriptPath = Join-Path $tempDir "main.ps1"
 $mainParams = @{}
 
-if ($SkipValidation) { $mainParams['SkipValidation'] = $true }
-if ($PSBoundParameters.ContainsKey('MaxConcurrency')) { $mainParams['MaxConcurrency'] = $MaxConcurrency }
+if ($SkipValidation -eq $true) { $mainParams['SkipValidation'] = $true }
+if ($MaxConcurrency -ne 4) { $mainParams['MaxConcurrency'] = $MaxConcurrency }
 if ($Categories.Count -gt 0) { $mainParams['Categories'] = $Categories }
 if ($Software.Count -gt 0) { $mainParams['Software'] = $Software }
-if ($ListSoftware) { $mainParams['ListSoftware'] = $true }
-if ($PSBoundParameters.ContainsKey('ConfigFile')) { $mainParams['ConfigFile'] = $ConfigFile }
+if ($ListSoftware -eq $true) { $mainParams['ListSoftware'] = $true }
+if ($ConfigFile -ne "software-config.json") { $mainParams['ConfigFile'] = $ConfigFile }
 
 # Execute main.ps1
 try {

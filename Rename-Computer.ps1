@@ -10,7 +10,16 @@
 #>
 
 [CmdletBinding()]
-param()
+param(
+    [Parameter(Mandatory = $false)]
+    [string]$NewComputerName,
+    
+    [Parameter(Mandatory = $false)]
+    [switch]$NoPrompt,
+    
+    [Parameter(Mandatory = $false)]
+    [switch]$NoRestart
+)
 
 #region Script Configuration
 # Prompt user for new computer name
@@ -25,9 +34,12 @@ try {
     $CurrentName = $env:COMPUTERNAME
     Write-Host "`nCurrent computer name: $CurrentName" -ForegroundColor Yellow
     
-    # Prompt for new computer name
-    Write-Host "`nPlease enter the new computer name (15 characters max, alphanumeric and hyphens only):" -ForegroundColor Cyan
-    $NewComputerName = Read-Host "New computer name"
+    # Get computer name (either from parameter or prompt)
+    if (-not $NewComputerName -and -not $NoPrompt) {
+        # Prompt for new computer name
+        Write-Host "`nPlease enter the new computer name (15 characters max, alphanumeric and hyphens only):" -ForegroundColor Cyan
+        $NewComputerName = Read-Host "New computer name"
+    }
     
     # Validate computer name
     if ([string]::IsNullOrWhiteSpace($NewComputerName)) {
@@ -78,11 +90,16 @@ try {
     Write-Host "`nComputer successfully renamed to $NewComputerName" -ForegroundColor Green
     Write-Host "A restart is required for the changes to take effect." -ForegroundColor Yellow
     
-    $Restart = Read-Host "`nDo you want to restart now? (Y/N)"
-    if ($Restart -eq 'Y' -or $Restart -eq 'y') {
-        Write-Host "Restarting computer in 10 seconds..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 10
-        Restart-Computer -Force
+    if (-not $NoRestart -and -not $NoPrompt) {
+        $Restart = Read-Host "`nDo you want to restart now? (Y/N)"
+        if ($Restart -eq 'Y' -or $Restart -eq 'y') {
+            Write-Host "Restarting computer in 10 seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 10
+            Restart-Computer -Force
+        }
+        else {
+            Write-Host "Please restart the computer manually to complete the rename." -ForegroundColor Yellow
+        }
     }
     else {
         Write-Host "Please restart the computer manually to complete the rename." -ForegroundColor Yellow

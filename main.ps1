@@ -215,8 +215,7 @@ foreach ($sw in ($allSoftware | Sort-Object category, name)) {
 }
 
 Write-SetupLog "" -Level Info
-Write-Host "Press any key to continue or CTRL+C to cancel..." -ForegroundColor Yellow
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+# Removed key press prompt for unattended installation
 #endregion
 
 #region Early System Configuration (Dark Theme, RDP)
@@ -274,7 +273,7 @@ $needsReboot = $false
 if (Test-Path $renameScript) {
     try {
         # Capture the script output to determine if rename happened
-        $renameOutput = & $renameScript
+        $renameOutput = & $renameScript -NoPrompt -NoRestart
         if ($renameOutput -match "successfully renamed") {
             $needsReboot = $true
             Write-SetupLog "Computer rename completed - reboot required" -Level Success
@@ -504,8 +503,4 @@ if ($needsReboot) {
 }
 #endregion
 
-# Keep window open if running in a new process
-if ($Host.Name -eq 'ConsoleHost') {
-    Write-Host "`nPress any key to exit..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-}
+# Removed key press prompt for unattended installation

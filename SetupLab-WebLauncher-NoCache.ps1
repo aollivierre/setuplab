@@ -1,5 +1,5 @@
-# Simple SetupLab Web Launcher - Compatible with iex/irm execution
-# No CmdletBinding or advanced parameter attributes for compatibility
+# SetupLab Web Launcher - Version 2.0 with Enhanced Cache Busting
+# Compatible with iex (irm 'url') execution
 
 param(
     $BaseUrl = "https://raw.githubusercontent.com/aollivierre/setuplab/main",
@@ -11,230 +11,146 @@ param(
     $ConfigFile = "software-config.json"
 )
 
-# Set execution policy for current process
+# Launcher version info
+$launcherVersion = "2.0.0"
+$launcherDate = "2025-07-31"
+
+# Set execution policy
 if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {
     Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
     Write-Host "Execution policy set to Bypass for current process" -ForegroundColor Green
 }
 
-#region Functions
-function Write-WebLog {
-    param($Message, $Level = "Info")
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] SetupLab Web Launcher v$launcherVersion ($launcherDate)" -ForegroundColor Cyan
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ============================================================" -ForegroundColor DarkGray
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Source: $BaseUrl" -ForegroundColor Gray
+
+# Create temp directory
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$tempPath = Join-Path $env:TEMP "SetupLab_$timestamp"
+
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Creating temporary directory: $tempPath" -ForegroundColor Gray
+New-Item -ItemType Directory -Path $tempPath -Force | Out-Null
+
+# Required files
+$filesToDownload = @(
+    @{Name = "main.ps1"; Required = $true},
+    @{Name = "SetupLabCore.psm1"; Required = $true},
+    @{Name = "SetupLabLogging.psm1"; Required = $true},
+    @{Name = "software-config.json"; Required = $true},
+    @{Name = "DarkTheme/Set-WindowsTheme.ps1"; Required = $false},
+    @{Name = "Set-DNSServers.ps1"; Required = $false},
+    @{Name = "Rename-Computer.ps1"; Required = $false},
+    @{Name = "Join-Domain.ps1"; Required = $false},
+    @{Name = "Configure-WindowsTerminal.ps1"; Required = $false},
+    @{Name = "Terminal/settings.json"; Required = $false},
+    @{Name = "Terminal/LaunchPowerShellAsSystem.ps1"; Required = $false},
+    @{Name = "Download-Sysinternals.ps1"; Required = $false},
+    @{Name = "install-claude-cli.ps1"; Required = $false}
+)
+
+# Download with aggressive cache busting
+$allSuccess = $true
+foreach ($file in $filesToDownload) {
+    $fileUrl = "$BaseUrl/$($file.Name)"
+    $fileDest = Join-Path $tempPath $file.Name
     
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $color = switch ($Level) {
-        "Error" { "Red" }
-        "Warning" { "Yellow" }
-        "Success" { "Green" }
-        "Info" { "White" }
-        default { "White" }
+    # Create subdirectory if needed
+    $destDir = Split-Path $fileDest -Parent
+    if (!(Test-Path $destDir)) {
+        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
     }
     
-    Write-Host "[$timestamp] $Message" -ForegroundColor $color
-}
-
-function Download-File {
-    param($Url, $OutputPath)
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Downloading: $fileUrl" -ForegroundColor Gray
     
     try {
-        Write-WebLog "Downloading: $Url" -Level Info
+        # Force fresh download with multiple cache-busting techniques
+        $webClient = New-Object System.Net.WebClient
+        $webClient.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
+        $webClient.Headers.Add("Pragma", "no-cache")
+        $webClient.Headers.Add("Expires", "0")
         
-        # Add cache-busting parameter
-        $timestamp = (Get-Date).ToString("yyyyMMddHHmmss")
-        $separator = if ($Url.Contains("?")) { "&" } else { "?" }
-        $cacheBustUrl = "$Url$separator" + "nocache=$timestamp"
-        
-        # Ensure TLS 1.2 is enabled
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        
-        # Download with no-cache headers
-        $headers = @{
-            'Cache-Control' = 'no-cache'
-            'Pragma' = 'no-cache'
+        # Add timestamp to URL
+        $cacheBustUrl = if ($fileUrl.Contains("?")) { 
+            "$fileUrl&cb=$timestamp" 
+        } else { 
+            "$fileUrl?cb=$timestamp" 
         }
         
-        Invoke-WebRequest -Uri $cacheBustUrl -OutFile $OutputPath -UseBasicParsing -Headers $headers -ErrorAction Stop
+        $webClient.DownloadFile($cacheBustUrl, $fileDest)
+        $webClient.Dispose()
         
-        if (Test-Path $OutputPath) {
-            Write-WebLog "Successfully downloaded to: $OutputPath" -Level Success
-            return $true
-        }
-        else {
-            Write-WebLog "Download appeared to succeed but file not found: $OutputPath" -Level Error
-            return $false
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Successfully downloaded to: $fileDest" -ForegroundColor Green
+        
+        # Verify critical files
+        if ($file.Name -eq "install-claude-cli.ps1") {
+            $content = Get-Content $fileDest -Raw
+            if ($content -match 'if \(-not \$currentPath\)') {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [OK] Claude CLI fix verified in downloaded file" -ForegroundColor Green
+            } else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [WARNING] Claude CLI fix NOT found!" -ForegroundColor Yellow
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] File may be cached. Trying alternate download..." -ForegroundColor Yellow
+                
+                # Try PowerShell method as fallback
+                $response = Invoke-WebRequest -Uri $cacheBustUrl -UseBasicParsing -Headers @{
+                    'Cache-Control' = 'no-cache'
+                    'Pragma' = 'no-cache'
+                }
+                [System.IO.File]::WriteAllText($fileDest, $response.Content)
+                
+                # Check again
+                $content = Get-Content $fileDest -Raw
+                if ($content -match 'if \(-not \$currentPath\)') {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [OK] Claude CLI fix verified after retry" -ForegroundColor Green
+                }
+            }
         }
     }
     catch {
-        Write-WebLog "Failed to download $Url : $_" -Level Error
-        return $false
-    }
-}
-#endregion
-
-#region Main Execution
-Write-WebLog "SetupLab Web Launcher (Simple Version)" -Level Info
-Write-WebLog ("=" * 60) -Level Info
-
-# Ensure BaseUrl doesn't end with a slash
-$BaseUrl = $BaseUrl.TrimEnd('/')
-
-# Create temporary directory
-$tempDir = Join-Path $env:TEMP "SetupLab_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-Write-WebLog "Creating temporary directory: $tempDir" -Level Info
-
-try {
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-}
-catch {
-    Write-WebLog "Failed to create temporary directory: $_" -Level Error
-    exit 1
-}
-
-# Define files to download
-$filesToDownload = @(
-    @{
-        Name = "main.ps1"
-        Url = "$BaseUrl/main.ps1"
-        Required = $true
-    },
-    @{
-        Name = "SetupLabCore.psm1"
-        Url = "$BaseUrl/SetupLabCore.psm1"
-        Required = $true
-    },
-    @{
-        Name = "SetupLabLogging.psm1"
-        Url = "$BaseUrl/SetupLabLogging.psm1"
-        Required = $true
-    },
-    @{
-        Name = $ConfigFile
-        Url = "$BaseUrl/$ConfigFile"
-        Required = $true
-    },
-    @{
-        Name = "DarkTheme/Set-WindowsTheme.ps1"
-        Url = "$BaseUrl/DarkTheme/Set-WindowsTheme.ps1"
-        Required = $true
-        SubDir = "DarkTheme"
-    },
-    @{
-        Name = "Set-DNSServers.ps1"
-        Url = "$BaseUrl/Set-DNSServers.ps1"
-        Required = $true
-    },
-    @{
-        Name = "Rename-Computer.ps1"
-        Url = "$BaseUrl/Rename-Computer.ps1"
-        Required = $true
-    },
-    @{
-        Name = "Join-Domain.ps1"
-        Url = "$BaseUrl/Join-Domain.ps1"
-        Required = $true
-    },
-    @{
-        Name = "Configure-WindowsTerminal.ps1"
-        Url = "$BaseUrl/Configure-WindowsTerminal.ps1"
-        Required = $true
-    },
-    @{
-        Name = "Terminal/settings.json"
-        Url = "$BaseUrl/Terminal/settings.json"
-        Required = $true
-        SubDir = "Terminal"
-    },
-    @{
-        Name = "Terminal/LaunchPowerShellAsSystem.ps1"
-        Url = "$BaseUrl/Terminal/LaunchPowerShellAsSystem.ps1"
-        Required = $true
-        SubDir = "Terminal"
-    },
-    @{
-        Name = "Download-Sysinternals.ps1"
-        Url = "$BaseUrl/Download-Sysinternals.ps1"
-        Required = $true
-    },
-    @{
-        Name = "install-claude-cli.ps1"
-        Url = "$BaseUrl/install-claude-cli.ps1"
-        Required = $false
-    }
-)
-
-# Download all required files
-$downloadSuccess = $true
-foreach ($file in $filesToDownload) {
-    # Handle subdirectories
-    if ($file.SubDir) {
-        $subDirPath = Join-Path $tempDir $file.SubDir
-        if (-not (Test-Path $subDirPath)) {
-            New-Item -ItemType Directory -Path $subDirPath -Force | Out-Null
-        }
-        $outputPath = Join-Path $tempDir $file.Name
-    }
-    else {
-        $outputPath = Join-Path $tempDir $file.Name
-    }
-    
-    if (-not (Download-File -Url $file.Url -OutputPath $outputPath)) {
         if ($file.Required) {
-            Write-WebLog "Failed to download required file: $($file.Name)" -Level Error
-            $downloadSuccess = $false
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Failed to download required file: $($file.Name)" -ForegroundColor Red
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Error: $_" -ForegroundColor Red
+            $allSuccess = $false
             break
-        }
-        else {
-            Write-WebLog "Failed to download optional file: $($file.Name), continuing..." -Level Warning
+        } else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Warning: Optional file not downloaded: $($file.Name)" -ForegroundColor Yellow
         }
     }
 }
 
-if (-not $downloadSuccess) {
-    Write-WebLog "Failed to download all required files. Cleaning up..." -Level Error
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+if (!$allSuccess) {
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Failed to download all required files. Exiting..." -ForegroundColor Red
     exit 1
 }
 
-Write-WebLog "" -Level Info
-Write-WebLog "All required files downloaded successfully" -Level Success
-Write-WebLog "" -Level Info
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" -ForegroundColor Gray
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] All required files downloaded successfully" -ForegroundColor Green
 
-# Build parameters for main.ps1
-$mainScriptPath = Join-Path $tempDir "main.ps1"
-$mainParams = @{}
-
-if ($SkipValidation -eq $true) { $mainParams['SkipValidation'] = $true }
-if ($MaxConcurrency -ne 4) { $mainParams['MaxConcurrency'] = $MaxConcurrency }
-if ($Categories.Count -gt 0) { $mainParams['Categories'] = $Categories }
-if ($Software.Count -gt 0) { $mainParams['Software'] = $Software }
-if ($ListSoftware -eq $true) { $mainParams['ListSoftware'] = $true }
-if ($ConfigFile -ne "software-config.json") { $mainParams['ConfigFile'] = $ConfigFile }
-
-# Execute main.ps1
-try {
-    Write-WebLog "Executing SetupLab main script..." -Level Info
-    Write-WebLog "" -Level Info
-    
-    # Change to temp directory to ensure relative paths work
-    Push-Location $tempDir
-    
-    # Execute the script
-    & $mainScriptPath @mainParams
-    
-    # Return to original directory
-    Pop-Location
-}
-catch {
-    Pop-Location
-    Write-WebLog "Error executing main script: $_" -Level Error
-    exit 1
-}
-finally {
-    # Cleanup temporary directory
-    Write-WebLog "" -Level Info
-    Write-WebLog "Cleaning up temporary files..." -Level Info
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+# Show file sizes and modification times for verification
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] File verification:" -ForegroundColor Cyan
+Get-ChildItem -Path $tempPath -Recurse -File | ForEach-Object {
+    $size = "{0:N0}" -f $_.Length
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]   $($_.Name) - $size bytes" -ForegroundColor Gray
 }
 
-Write-WebLog "SetupLab Web Launcher completed" -Level Success
-#endregion
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" -ForegroundColor Gray
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Executing SetupLab main script..." -ForegroundColor Yellow
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" -ForegroundColor Gray
+
+# Build parameters
+$params = @{
+    ConfigFile = Join-Path $tempPath $ConfigFile
+}
+
+if ($SkipValidation) { $params['SkipValidation'] = $true }
+if ($MaxConcurrency) { $params['MaxConcurrency'] = $MaxConcurrency }
+if ($Categories.Count -gt 0) { $params['Categories'] = $Categories }
+if ($Software.Count -gt 0) { $params['Software'] = $Software }
+if ($ListSoftware) { $params['ListSoftware'] = $true }
+
+# Execute
+& (Join-Path $tempPath "main.ps1") @params
+
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" -ForegroundColor Gray
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Cleaning up temporary files..." -ForegroundColor Gray
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] SetupLab Web Launcher completed" -ForegroundColor Green

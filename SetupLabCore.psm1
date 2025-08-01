@@ -647,7 +647,7 @@ function Invoke-SetupInstaller {
         }
         
         'CUSTOM' {
-            if (-not $CustomInstallScript) {
+            if (-not $CustomInstallScript -or [string]::IsNullOrWhiteSpace($CustomInstallScript)) {
                 throw "Custom install script path is required for CUSTOM install type"
             }
             

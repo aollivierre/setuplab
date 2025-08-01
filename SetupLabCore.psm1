@@ -1127,10 +1127,17 @@ function Start-SerialInstallation {
                 Write-SetupLog "  Resolved Path: $scriptPath" -Level Debug
                 Write-SetupLog "  Path Exists: $(Test-Path $scriptPath)" -Level Debug
                 
+                # Additional validation before passing to installer
+                if ([string]::IsNullOrWhiteSpace($scriptPath)) {
+                    throw "Script path is empty after resolution"
+                }
+                
                 $installerParams = @{
                     InstallType = 'CUSTOM'
                     CustomInstallScript = $scriptPath
                 }
+                
+                Write-SetupLog "  Passing CustomInstallScript: $($installerParams.CustomInstallScript)" -Level Debug
                 
                 Invoke-SetupInstaller @installerParams
             }

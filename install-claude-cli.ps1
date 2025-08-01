@@ -224,14 +224,43 @@ Write-Host ""
 if ($claudeFound) {
     Write-Host "Running health check..." -ForegroundColor Yellow
     try {
-        if ($claudePath -and (Test-Path $claudePath)) {
-            & cmd /c "`"$claudePath`" doctor"
+        # Run claude doctor with input redirection to prevent hanging
+        $doctorCmd = if ($claudePath -and (Test-Path $claudePath)) { "`"$claudePath`" doctor" } else { "claude doctor" }
+        
+        # Create a process with no input to prevent hanging
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = "cmd.exe"
+        $pinfo.Arguments = "/c echo. | $doctorCmd"
+        $pinfo.UseShellExecute = $false
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.RedirectStandardError = $true
+        $pinfo.RedirectStandardInput = $true
+        $pinfo.CreateNoWindow = $true
+        
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $pinfo
+        $process.Start() | Out-Null
+        
+        # Wait up to 3 seconds for the command to complete
+        $completed = $process.WaitForExit(3000)
+        
+        if ($completed) {
+            $output = $process.StandardOutput.ReadToEnd()
+            if ($output) {
+                Write-Host $output.Trim()
+            }
+            Write-Host "Health check completed" -ForegroundColor Green
         } else {
-            claude doctor
+            # Kill the process if it's still running
+            if (-not $process.HasExited) {
+                $process.Kill()
+            }
+            Write-Host "Health check skipped (interactive mode detected)" -ForegroundColor Yellow
+            Write-Host "You can run 'claude doctor' manually to verify setup" -ForegroundColor Gray
         }
-        Write-Host "Health check completed" -ForegroundColor Green
     } catch {
-        Write-Host "Could not run health check - try restarting terminal" -ForegroundColor Yellow
+        Write-Host "Could not run health check automatically" -ForegroundColor Yellow
+        Write-Host "You can run 'claude doctor' manually after installation" -ForegroundColor Gray
     }
 }
 

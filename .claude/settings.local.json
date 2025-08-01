@@ -29,7 +29,9 @@
       "Bash(move commit-msg.ps1 create-commit.ps1 archivetemp-files)",
       "Bash(git pull:*)",
       "Bash(cp:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "WebFetch(domain:qa.mythicsoft.com)",
+      "WebFetch(domain:www.mythicsoft.com)"
     ],
     "deny": []
   }

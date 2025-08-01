@@ -1,9 +1,9 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Joins a computer to the abc.local domain
+    Joins a computer to the xyz.local domain
 .DESCRIPTION
-    This script joins the computer to abc.local domain using specified credentials
+    This script joins the computer to xyz.local domain using specified credentials
     and tests the domain connection after joining
 .EXAMPLE
     .\Join-Domain.ps1
@@ -13,8 +13,8 @@
 param()
 
 #region Script Configuration
-$DomainName = "abc.local"
-$DomainUser = "abc\administrator"
+$DomainName = "xyz.local"
+$DomainUser = "xyz\administrator"
 $DomainPassword = "Default1234"
 #endregion
 

@@ -45,8 +45,9 @@ $filesToDownload = @(
     @{Name = "Configure-WindowsTerminal.ps1"; Required = $false},
     @{Name = "Terminal/settings.json"; Required = $false},
     @{Name = "Terminal/LaunchPowerShellAsSystem.ps1"; Required = $false},
-    @{Name = "Download-Sysinternals.ps1"; Required = $false},
-    @{Name = "install-claude-cli.ps1"; Required = $false}
+    @{Name = "Download-Sysinternals-Enhanced.ps1"; Required = $false},
+    @{Name = "install-claude-cli.ps1"; Required = $false},
+    @{Name = "Get-LatestPythonUrl.ps1"; Required = $false}
 )
 
 # Download with aggressive cache busting

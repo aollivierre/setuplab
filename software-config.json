@@ -46,7 +46,10 @@
             "downloadUrl": "https://nodejs.org/dist/v22.17.1/node-v22.17.1-x64.msi",
             "installerExtension": ".msi",
             "installType": "MSI",
-            "installArguments": [],
+            "installArguments": [
+                "/qn",
+                "/norestart"
+            ],
             "minimumVersion": "20.0.0",
             "category": "Development",
             "postInstallCommand": "setx PATH \"%PATH%;%ProgramFiles%\\nodejs\\\" /M",
@@ -138,7 +141,10 @@
             "downloadUrl": "https://github.com/cli/cli/releases/download/v2.75.1/gh_2.75.1_windows_amd64.msi",
             "installerExtension": ".msi",
             "installType": "MSI",
-            "installArguments": [],
+            "installArguments": [
+                "/qn",
+                "/norestart"
+            ],
             "minimumVersion": null,
             "category": "Development"
         },

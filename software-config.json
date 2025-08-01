@@ -236,7 +236,7 @@
                          "name":  "Claude CLI",
                          "enabled":  true,
                          "registryName":  null,
-                         "executablePath":  null,
+                         "executablePath":  "%APPDATA%\\npm\\claude.cmd",
                          "downloadUrl":  null,
                          "installerExtension":  null,
                          "installType":  "CUSTOM",

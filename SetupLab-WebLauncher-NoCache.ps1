@@ -12,8 +12,8 @@ param(
 )
 
 # Launcher version info
-$launcherVersion = "2.0.0"
-$launcherDate = "2025-07-31"
+$launcherVersion = "2.1.0"
+$launcherDate = "2025-08-01"
 
 # Set execution policy
 if ((Get-ExecutionPolicy -Scope Process) -ne 'Bypass') {

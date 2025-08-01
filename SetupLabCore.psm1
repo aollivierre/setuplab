@@ -1108,9 +1108,17 @@ function Start-SerialInstallation {
                 } else {
                     if (-not $PSScriptRoot) {
                         # Fallback: use module directory
-                        $moduleDir = Split-Path (Get-Module SetupLabCore).Path -Parent
-                        Write-SetupLog "  PSScriptRoot is empty, using module directory: $moduleDir" -Level Debug
-                        Join-Path $moduleDir $installation.customInstallScript
+                        $module = Get-Module SetupLabCore
+                        if ($module) {
+                            $moduleDir = Split-Path $module.Path -Parent
+                            Write-SetupLog "  PSScriptRoot is empty, using module directory: $moduleDir" -Level Debug
+                            Join-Path $moduleDir $installation.customInstallScript
+                        } else {
+                            # Module not loaded, use current directory as fallback
+                            $currentDir = Get-Location
+                            Write-SetupLog "  PSScriptRoot empty and module not loaded, using current dir: $currentDir" -Level Debug
+                            Join-Path $currentDir $installation.customInstallScript
+                        }
                     } else {
                         Join-Path $PSScriptRoot $installation.customInstallScript
                     }

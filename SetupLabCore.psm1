@@ -541,7 +541,7 @@ function Invoke-SetupInstaller {
         [string[]]$Arguments = @(),
         
         [Parameter(Mandatory = $false)]
-        [ValidateSet('MSI', 'EXE', 'MSIX', 'NPM', 'CUSTOM', 'Auto')]
+        [ValidateSet('MSI', 'EXE', 'MSIX', 'NPM', 'CUSTOM', 'MSI_ZIP', 'Auto')]
         [string]$InstallType = 'Auto',
         
         [Parameter(Mandatory = $false)]

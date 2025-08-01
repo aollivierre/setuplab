@@ -91,7 +91,7 @@ else {
     Import-Module $modulePath -Force
     
     # Run installation
-    $result = Start-SerialInstallation -SoftwareList $config.software
+    $result = Start-SerialInstallation -Installations $config.software
     
     Write-Host "`n=== RESULTS ===" -ForegroundColor Yellow
     Write-Host "Completed: $($result.Completed.Count)" -ForegroundColor Green
@@ -115,8 +115,19 @@ else {
     
     # Show log location
     $logDir = Join-Path $PSScriptRoot "Logs"
-    $latestLog = Get-ChildItem $logDir -Filter "SetupLab_*.log" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if ($latestLog) {
-        Write-Host "`nLog file: $($latestLog.FullName)" -ForegroundColor Gray
+    Write-Host "`nLooking for logs in: $logDir" -ForegroundColor Gray
+    
+    # Get today's log file
+    $todayLog = "SetupLab_$(Get-Date -Format 'yyyyMMdd').log"
+    $todayLogPath = Join-Path $logDir $todayLog
+    
+    if (Test-Path $todayLogPath) {
+        Write-Host "Today's log file: $todayLogPath" -ForegroundColor Yellow
+    }
+    
+    # Also show latest log if different
+    $latestLog = Get-ChildItem $logDir -Filter "SetupLab_*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($latestLog -and $latestLog.Name -ne $todayLog) {
+        Write-Host "Latest log file: $($latestLog.FullName)" -ForegroundColor Gray
     }
 }

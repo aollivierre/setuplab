@@ -50,6 +50,12 @@ if (-not $npmGlobalDir) {
 
 Write-Host "npm global directory: $npmGlobalDir" -ForegroundColor Gray
 
+# Ensure npm global directory exists
+if (-not (Test-Path $npmGlobalDir)) {
+    Write-Host "Creating npm global directory: $npmGlobalDir" -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $npmGlobalDir -Force | Out-Null
+}
+
 # Check if already in PATH
 try {
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")

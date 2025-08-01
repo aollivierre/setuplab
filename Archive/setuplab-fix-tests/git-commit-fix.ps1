@@ -1,0 +1,2 @@
+# Create commit with fix
+git commit -m "Fix SetupLabCore.psm1 CUSTOM installer empty string bug" -m "- Fixed line 1111 where Get-Module could return null causing empty scriptPath" -m "- Added null check for module before accessing .Path property" -m "- Added fallback to current directory if module not loaded" -m "- Updated WebLauncher version to 2.1.0 to track this fix" -m "- Fixes: Cannot bind argument to parameter Path because it is an empty string"

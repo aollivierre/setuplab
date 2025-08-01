@@ -4,8 +4,13 @@
 
 ### One-Line Installer (Recommended)
 ```powershell
-# Works on fresh Windows 11 installations - 100% success rate!
+# From PowerShell - Works on fresh Windows 11 installations - 100% success rate!
 iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')
+```
+
+```cmd
+# From CMD or Run dialog (Win+R) - Uses PowerShell 5.1
+powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')"
 ```
 
 **What this installs (16 applications):**
@@ -26,6 +31,8 @@ iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-W
 ## Alternative Installation Methods
 
 ### With Parameters
+
+**From PowerShell:**
 ```powershell
 # Skip validation checks
 iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -SkipValidation
@@ -38,6 +45,15 @@ iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-W
 
 # List available software
 iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -ListSoftware
+```
+
+**From CMD:**
+```cmd
+# Skip validation checks
+powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -SkipValidation"
+
+# Install specific software only
+powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -Software 'Git','Chrome','VSCode'"
 ```
 
 ### Local Execution

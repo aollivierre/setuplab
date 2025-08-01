@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(mkdir:*)",
@@ -24,9 +25,9 @@
       "Bash(Start-Sleep -Seconds 5)",
       "Bash(curl:*)",
       "Bash(Start-Sleep -Seconds 60)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(move commit-msg.ps1 create-commit.ps1 archivetemp-files)"
     ],
     "deny": []
-  },
-  "$schema": "https://json.schemastore.org/claude-code-settings.json"
+  }
 }

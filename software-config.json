@@ -233,7 +233,7 @@
                          "category":  "Browsers"
                      },
                      {
-                         "name":  "Claude CLI",
+                         "name":  "Claude Code (CLI)",
                          "enabled":  true,
                          "registryName":  null,
                          "executablePath":  "%APPDATA%\\npm\\claude.cmd",

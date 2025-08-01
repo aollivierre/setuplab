@@ -9,7 +9,7 @@ iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-W
 ```
 
 **What this installs (18 applications):**
-- ✅ **Development**: Git, VS Code, Node.js, GitHub Desktop, GitHub CLI, Claude CLI
+- ✅ **Development**: Git, VS Code, Node.js, GitHub Desktop, GitHub CLI, Claude Code (CLI)
 - ✅ **Utilities**: 7-Zip, ShareX, Everything, FileLocator Pro, Warp Terminal, Windows Terminal
 - ✅ **Browsers**: Google Chrome, Mozilla Firefox  
 - ✅ **Runtime**: Visual C++ Redistributables

@@ -1,0 +1,40 @@
+﻿Transcript started, output file is C:\Users\ADMINI~1\AppData\Local\Temp\claude-cli-trace.txt
+Transcript stopped, output file is C:\Users\ADMINI~1\AppData\Local\Temp\claude-cli-trace.txt
+**********************
+Windows PowerShell transcript start
+Start time: 20250731213104
+Username: xyz\administrator
+RunAs User: XYZ\Administrator
+Configuration Name: Microsoft.PowerShell
+Machine: SETUPLAB01 (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\system32\wsmprovhost.exe -Embedding
+Process ID: 5616
+PSVersion: 5.1.26100.4652
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.4652
+BuildVersion: 10.0.26100.4652
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Downloading install-claude-cli.ps1...
+Script size: C:\Users\ADMINI~1\AppData\Local\Temp\install-claude-cli-test.ps1.Length bytes
+
+Executing install-claude-cli.ps1 with detailed tracing...
+
+ERROR DETAILS:
+Message: File C:\Users\administrator\AppData\Local\Temp\install-claude-cli-test.ps1 cannot be loaded because running scripts is disabled on this system. For more information, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170.
+Exception Type: System.Management.Automation.PSSecurityException
+Target Object:
+Category Info: SecurityError: (:) [], PSSecurityException
+Invocation Info:             & $scriptPath -ErrorAction Stop
+Script Stack Trace: at <ScriptBlock>, <No file>: line 22
+
+Error at line 22:
+>>>
+**********************
+Windows PowerShell transcript end
+End time: 20250731213105
+**********************
+

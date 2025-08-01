@@ -539,6 +539,13 @@ function Invoke-SetupInstaller {
         [string]$CustomInstallScript
     )
     
+    # Log all parameters at entry
+    Write-SetupLog "Invoke-SetupInstaller called with:" -Level Debug
+    Write-SetupLog "  InstallerPath: '$InstallerPath'" -Level Debug
+    Write-SetupLog "  InstallType: '$InstallType'" -Level Debug
+    Write-SetupLog "  CustomInstallScript: '$CustomInstallScript'" -Level Debug
+    Write-SetupLog "  NpmPackage: '$NpmPackage'" -Level Debug
+    
     if ($InstallType -eq 'NPM') {
         # Handle NPM package installation
         if (-not $NpmPackage) {
@@ -1273,6 +1280,9 @@ function Start-SerialInstallation {
         }
         catch {
             Write-SetupLog "Failed to install $($installation.Name): $_" -Level Error
+            Write-SetupLog "Error Type: $($_.Exception.GetType().FullName)" -Level Error
+            Write-SetupLog "Target Site: $($_.Exception.TargetSite)" -Level Error
+            Write-SetupLog "Inner Exception: $($_.Exception.InnerException)" -Level Error
             $failed += $installation
         }
     }

@@ -649,6 +649,7 @@ function Invoke-SetupInstaller {
             '.msi'  { 'MSI' }
             '.msix' { 'MSIX' }
             '.msixbundle' { 'MSIX' }
+            '.zip' { 'MSI_ZIP' }  # Assume ZIP files contain MSI
             default { 'EXE' }
         }
     }
@@ -801,13 +802,56 @@ function Invoke-SetupInstaller {
                 throw "Custom install script failed: $_"
             }
         }
+        
+        'MSI_ZIP' {
+            Write-SetupLog "MSI_ZIP installer type - extracting MSI from ZIP" -Level Debug
+            
+            # Create temp extraction path
+            $extractPath = Join-Path $env:TEMP "msi_extract_$(Get-Random)"
+            New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
+            
+            try {
+                # Extract ZIP file
+                Write-SetupLog "Extracting ZIP: $InstallerPath to $extractPath" -Level Debug
+                Add-Type -AssemblyName System.IO.Compression.FileSystem
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($InstallerPath, $extractPath)
+                
+                # Find MSI file
+                $msiFiles = Get-ChildItem -Path $extractPath -Filter "*.msi" -Recurse
+                if (-not $msiFiles) {
+                    throw "No MSI file found in ZIP archive"
+                }
+                
+                # Use the first (or largest) MSI file
+                $msiFile = $msiFiles | Sort-Object Length -Descending | Select-Object -First 1
+                Write-SetupLog "Found MSI: $($msiFile.Name) - $([math]::Round($msiFile.Length / 1MB, 2)) MB" -Level Debug
+                
+                # Install the MSI
+                $msiArgs = @("/i", "`"$($msiFile.FullName)`"") + $Arguments
+                Write-SetupLog "Running msiexec with args: $($msiArgs -join ' ')" -Level Debug
+                $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $msiArgs -Wait -PassThru
+                
+                # Handle MSI error codes
+                if ($process.ExitCode -eq 1603) {
+                    Write-SetupLog "MSI Error 1603 detected - checking if software was installed anyway" -Level Warning
+                    Start-Sleep -Seconds 5
+                }
+            }
+            finally {
+                # Cleanup extraction directory
+                if (Test-Path $extractPath) {
+                    Remove-Item $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+                    Write-SetupLog "Cleaned up extraction directory" -Level Debug
+                }
+            }
+        }
     }
     
     # Only check exit code if we have a process and it has exited
     if ($process -and $process.HasExited) {
         if ($process.ExitCode -ne 0) {
             # For MSI installs, check if software was actually installed despite error code
-            if ($InstallType -eq 'MSI' -and ($process.ExitCode -eq 1603 -or $process.ExitCode -eq 3010)) {
+            if ($InstallType -in @('MSI', 'MSI_ZIP') -and ($process.ExitCode -eq 1603 -or $process.ExitCode -eq 3010)) {
                 Write-SetupLog "MSI returned code $($process.ExitCode), checking if software was installed..." -Level Warning
                 # Give it a moment to complete
                 Start-Sleep -Seconds 2

@@ -196,11 +196,12 @@
             "enabled": true,
             "registryName": "FileLocator Pro",
             "executablePath": "C:\\Program Files\\Mythicsoft\\FileLocator Pro\\FileLocatorPro.exe",
-            "downloadUrl": "https://download.mythicsoft.com/flp/3522/filelocator_3522.exe",
-            "installerExtension": ".exe",
-            "installType": "EXE",
+            "downloadUrl": "https://download.mythicsoft.com/flp/3522/filelocator_x64_msi_3522.zip",
+            "installerExtension": ".zip",
+            "installType": "MSI_ZIP",
             "installArguments": [
-                "/VERYSILENT"
+                "/quiet",
+                "/norestart"
             ],
             "minimumVersion": null,
             "category": "Utilities"

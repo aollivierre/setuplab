@@ -69,9 +69,9 @@ try {
         Write-Host $result.Summary
         
         if ($result.ClaudeInstalled) {
-            Write-Host "`n✓ Claude CLI installed successfully!" -ForegroundColor Green
+            Write-Host "`n[OK] Claude CLI installed successfully!" -ForegroundColor Green
         } elseif ($result.ClaudeFailed) {
-            Write-Host "`n✗ Claude CLI installation failed" -ForegroundColor Red
+            Write-Host "`n[FAIL] Claude CLI installation failed" -ForegroundColor Red
         }
     }
     else {

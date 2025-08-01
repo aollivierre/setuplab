@@ -91,13 +91,13 @@ try {
     # Final verdict
     Write-Host "`n=== VERDICT ===" -ForegroundColor Cyan
     if ($result.ClaudeExists -and $result.ClaudeVersion -match "Claude Code") {
-        Write-Host "✅ SUCCESS! Claude Code is installed and working!" -ForegroundColor Green
+        Write-Host "[DONE] SUCCESS! Claude Code is installed and working!" -ForegroundColor Green
         Write-Host "The npm directory creation fix worked!" -ForegroundColor Green
     } elseif ($result.InstallersRunning -gt 0) {
-        Write-Host "⏳ Installation still in progress..." -ForegroundColor Yellow
+        Write-Host "[WAIT] Installation still in progress..." -ForegroundColor Yellow
         Write-Host "Please wait for completion" -ForegroundColor Yellow
     } elseif (-not $result.NpmDirExists) {
-        Write-Host "❌ The npm directory was not created" -ForegroundColor Red
+        Write-Host "[ERROR] The npm directory was not created" -ForegroundColor Red
         Write-Host "Claude installation likely failed" -ForegroundColor Red
     } else {
         Write-Host "Status unclear - check logs for details" -ForegroundColor Yellow

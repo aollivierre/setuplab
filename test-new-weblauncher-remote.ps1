@@ -61,15 +61,15 @@ try {
     
     if ($result.Success) {
         if ($result.VersionDetected) {
-            Write-Host "✓ New version detected in output" -ForegroundColor Green
+            Write-Host "[OK] New version detected in output" -ForegroundColor Green
         } else {
-            Write-Host "✗ Version info not found" -ForegroundColor Red
+            Write-Host "[FAIL] Version info not found" -ForegroundColor Red
         }
         
         if ($result.ClaudeInstalled) {
-            Write-Host "✓ Claude CLI installed successfully!" -ForegroundColor Green
+            Write-Host "[OK] Claude CLI installed successfully!" -ForegroundColor Green
         } elseif ($result.ClaudeFailed) {
-            Write-Host "✗ Claude CLI installation failed" -ForegroundColor Red
+            Write-Host "[FAIL] Claude CLI installation failed" -ForegroundColor Red
         } else {
             Write-Host "? Claude CLI status unknown" -ForegroundColor Yellow
         }

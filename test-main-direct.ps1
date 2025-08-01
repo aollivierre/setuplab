@@ -153,7 +153,7 @@ try {
     # Display results with visual bar
     Write-Host ""
     foreach ($i in 1..16) {
-        Write-Host -NoNewline "█" -ForegroundColor $(if ($i -le $finalResults.Installed) { "Green" } else { "Red" })
+        Write-Host -NoNewline "[BLOCK]" -ForegroundColor $(if ($i -le $finalResults.Installed) { "Green" } else { "Red" })
     }
     Write-Host ""
     

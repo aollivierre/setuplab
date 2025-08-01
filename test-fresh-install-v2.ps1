@@ -172,11 +172,11 @@ try {
     Write-Host "========================================" -ForegroundColor Cyan
     
     if ($percentage -eq 100) {
-        Write-Host "`n✅ SUCCESS! 100% AUTOMATED INSTALLATION ACHIEVED!" -ForegroundColor Green
+        Write-Host "`n[DONE] SUCCESS! 100% AUTOMATED INSTALLATION ACHIEVED!" -ForegroundColor Green
         Write-Host "All 16 applications installed without any manual intervention!" -ForegroundColor Green
     }
     else {
-        Write-Host "`n❌ Installation incomplete. Missing apps:" -ForegroundColor Red
+        Write-Host "`n[ERROR] Installation incomplete. Missing apps:" -ForegroundColor Red
         $missing = $finalResults.Results | Where-Object { -not $_.Installed }
         $missing | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Red }
     }

@@ -173,7 +173,7 @@ $final = Invoke-Command -Session $session -ScriptBlock {
 }
 
 foreach ($i in 1..16) {
-    Write-Host -NoNewline "█" -ForegroundColor $(if ($i -le $final.Installed) { "Green" } else { "Red" })
+    Write-Host -NoNewline "[BLOCK]" -ForegroundColor $(if ($i -le $final.Installed) { "Green" } else { "Red" })
 }
 
 $percentage = [math]::Round(($final.Installed / $final.Total) * 100, 1)
@@ -181,7 +181,7 @@ Write-Host " $($final.Installed)/$($final.Total) ($percentage%)" -ForegroundColo
 
 if ($final.Installed -eq 16) {
     Write-Host "`n============================================================" -ForegroundColor Green
-    Write-Host "🎉 100% SUCCESS RATE ACHIEVED! 🎉" -ForegroundColor Green
+    Write-Host "[CELEBRATE] 100% SUCCESS RATE ACHIEVED! [CELEBRATE]" -ForegroundColor Green
     Write-Host "ALL 16 APPLICATIONS SUCCESSFULLY INSTALLED!" -ForegroundColor Green
     Write-Host "============================================================" -ForegroundColor Green
 } else {

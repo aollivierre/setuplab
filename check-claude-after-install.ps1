@@ -68,12 +68,12 @@ try {
     }
     
     if ($result.ClaudeCmdExists -and $result.ClaudeVersion -match "Claude Code") {
-        Write-Host "`n✅ SUCCESS! Claude Code is installed and working!" -ForegroundColor Green
+        Write-Host "`n[DONE] SUCCESS! Claude Code is installed and working!" -ForegroundColor Green
         Write-Host "Version: $($result.ClaudeVersion)" -ForegroundColor Green
     } elseif ($result.InstallersRunning) {
-        Write-Host "`n⏳ Installation may still be in progress..." -ForegroundColor Yellow
+        Write-Host "`n[WAIT] Installation may still be in progress..." -ForegroundColor Yellow
     } else {
-        Write-Host "`n❌ Claude Code installation issue detected" -ForegroundColor Red
+        Write-Host "`n[ERROR] Claude Code installation issue detected" -ForegroundColor Red
     }
     
     Remove-PSSession -Session $session

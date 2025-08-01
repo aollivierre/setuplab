@@ -99,9 +99,9 @@ foreach ($file in $filesToDownload) {
         if ($file.Name -eq "install-claude-cli.ps1") {
             $content = Get-Content $fileDest -Raw
             if ($content -match 'if \(-not \$currentPath\)') {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ✓ Claude CLI fix detected in downloaded file" -ForegroundColor Green
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [OK] Claude CLI fix detected in downloaded file" -ForegroundColor Green
             } else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ⚠ Claude CLI fix NOT found in downloaded file!" -ForegroundColor Yellow
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [WARNING] Claude CLI fix NOT found in downloaded file!" -ForegroundColor Yellow
             }
         }
     } else {

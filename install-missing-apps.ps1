@@ -340,7 +340,7 @@ try {
     }
     
     if ($finalStatus.Installed -eq $finalStatus.Total) {
-        Write-Host "`n🎉 100% SUCCESS RATE ACHIEVED! 🎉" -ForegroundColor Green
+        Write-Host "`n[CELEBRATE] 100% SUCCESS RATE ACHIEVED! [CELEBRATE]" -ForegroundColor Green
     }
     
     Remove-PSSession -Session $session

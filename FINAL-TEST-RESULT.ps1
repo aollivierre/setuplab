@@ -40,17 +40,17 @@ try {
     
     Write-Host "`nnpm directory exists: " -NoNewline
     if ($result.NpmDir) {
-        Write-Host "YES ✓" -ForegroundColor Green
+        Write-Host "YES [OK]" -ForegroundColor Green
     } else {
-        Write-Host "NO ✗" -ForegroundColor Red
+        Write-Host "NO [FAIL]" -ForegroundColor Red
     }
     
     Write-Host "Claude Code installed: " -NoNewline
     if ($result.ClaudeCmd) {
-        Write-Host "YES ✓" -ForegroundColor Green
+        Write-Host "YES [OK]" -ForegroundColor Green
         Write-Host "Version: $($result.ClaudeVersion)" -ForegroundColor Green
     } else {
-        Write-Host "NO ✗" -ForegroundColor Red
+        Write-Host "NO [FAIL]" -ForegroundColor Red
     }
     
     if ($result.InstallersActive) {
@@ -61,15 +61,15 @@ try {
     Write-Host "==============" -ForegroundColor Cyan
     
     if ($result.ClaudeCmd -and $result.ClaudeVersion -match "Claude Code") {
-        Write-Host "✅ SUCCESS! Claude Code installed successfully on fresh system!" -ForegroundColor Green
-        Write-Host "✅ The npm directory creation fix WORKED!" -ForegroundColor Green
-        Write-Host "✅ Version: $($result.ClaudeVersion)" -ForegroundColor Green
+        Write-Host "[DONE] SUCCESS! Claude Code installed successfully on fresh system!" -ForegroundColor Green
+        Write-Host "[DONE] The npm directory creation fix WORKED!" -ForegroundColor Green
+        Write-Host "[DONE] Version: $($result.ClaudeVersion)" -ForegroundColor Green
     } elseif ($result.InstallersActive) {
-        Write-Host "⏳ Installation is still in progress" -ForegroundColor Yellow
-        Write-Host "⏳ Please run this script again in a few minutes" -ForegroundColor Yellow
+        Write-Host "[WAIT] Installation is still in progress" -ForegroundColor Yellow
+        Write-Host "[WAIT] Please run this script again in a few minutes" -ForegroundColor Yellow
     } else {
-        Write-Host "❌ Claude Code was NOT installed" -ForegroundColor Red
-        Write-Host "❌ The npm directory was not created: $($result.NpmDir)" -ForegroundColor Red
+        Write-Host "[ERROR] Claude Code was NOT installed" -ForegroundColor Red
+        Write-Host "[ERROR] The npm directory was not created: $($result.NpmDir)" -ForegroundColor Red
         
         if ($result.SummaryFile -match "Claude.*Failed") {
             Write-Host "`nSetupLab reported Claude installation failed" -ForegroundColor Red

@@ -27,9 +27,9 @@ try {
             # Check if our fix is in the file
             $content = Get-Content $scriptPath -Raw
             if ($content -match "Creating npm global directory") {
-                Write-Host "✓ npm directory creation fix is present" -ForegroundColor Green
+                Write-Host "[OK] npm directory creation fix is present" -ForegroundColor Green
             } else {
-                Write-Host "✗ npm directory creation fix is MISSING!" -ForegroundColor Red
+                Write-Host "[FAIL] npm directory creation fix is MISSING!" -ForegroundColor Red
             }
             
             Write-Host "`n2. Running installation..." -ForegroundColor Yellow
@@ -38,11 +38,11 @@ try {
             Write-Host "`n3. Final verification..." -ForegroundColor Yellow
             $claudePath = "$env:APPDATA\npm\claude.cmd"
             if (Test-Path $claudePath) {
-                Write-Host "✓ Claude installed successfully!" -ForegroundColor Green
+                Write-Host "[OK] Claude installed successfully!" -ForegroundColor Green
                 $version = cmd /c "`"$claudePath`" --version 2>&1"
                 Write-Host "Version: $version" -ForegroundColor Green
             } else {
-                Write-Host "✗ Claude not found after installation" -ForegroundColor Red
+                Write-Host "[FAIL] Claude not found after installation" -ForegroundColor Red
             }
             
         } catch {

@@ -64,10 +64,10 @@ try {
     }
     
     if ($result.ClaudeExists -and $result.ClaudeVersion -match "Claude Code") {
-        Write-Host "`n✅ SUCCESS! Claude Code is installed on the fresh system!" -ForegroundColor Green
+        Write-Host "`n[DONE] SUCCESS! Claude Code is installed on the fresh system!" -ForegroundColor Green
         Write-Host "The fix worked perfectly!" -ForegroundColor Green
     } elseif ($result.NodeVersion -match "v\d+" -and -not $result.ClaudeExists) {
-        Write-Host "`n⚠️ Node.js is installed but Claude is not yet installed" -ForegroundColor Yellow
+        Write-Host "`n[WARNING] Node.js is installed but Claude is not yet installed" -ForegroundColor Yellow
         Write-Host "The installation may still be running or Claude installation step hasn't been reached yet" -ForegroundColor Yellow
     }
     

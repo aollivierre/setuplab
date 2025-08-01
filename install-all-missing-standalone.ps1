@@ -175,10 +175,10 @@ try {
         } -ArgumentList $installer
         
         if ($result.Success) {
-            Write-Host "  ✓ $($result.Message)" -ForegroundColor Green
+            Write-Host "  [OK] $($result.Message)" -ForegroundColor Green
         }
         else {
-            Write-Host "  ✗ $($result.Message)" -ForegroundColor Red
+            Write-Host "  [FAIL] $($result.Message)" -ForegroundColor Red
         }
     }
     
@@ -225,10 +225,10 @@ try {
     }
     
     if ($claudeResult.Success) {
-        Write-Host "  ✓ $($claudeResult.Message)" -ForegroundColor Green
+        Write-Host "  [OK] $($claudeResult.Message)" -ForegroundColor Green
     }
     else {
-        Write-Host "  ✗ $($claudeResult.Message)" -ForegroundColor Red
+        Write-Host "  [FAIL] $($claudeResult.Message)" -ForegroundColor Red
     }
     
     # Final verification

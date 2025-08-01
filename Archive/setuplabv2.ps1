@@ -1,4 +1,4 @@
-﻿# Directory for scripts
+# Directory for scripts
 $scriptFolderPath = "$env:SystemDrive\InstallScripts"
 
 If (!(Test-Path -Path $scriptFolderPath)) {

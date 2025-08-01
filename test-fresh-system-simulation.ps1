@@ -76,10 +76,10 @@ try {
     Write-Host "Installation successful: $($result.InstallSuccess)" -ForegroundColor $(if($result.InstallSuccess){'Green'}else{'Red'})
     
     if ($result.NpmDirExists -and $result.ClaudeCmdExists -and $result.ClaudeVersion -match "Claude Code") {
-        Write-Host "`n✅ CONFIRMED: The fix WILL work on fresh systems!" -ForegroundColor Green
+        Write-Host "`n[DONE] CONFIRMED: The fix WILL work on fresh systems!" -ForegroundColor Green
         Write-Host "The npm directory creation fix ensures installation succeeds even when %APPDATA%\npm doesn't exist." -ForegroundColor Green
     } else {
-        Write-Host "`n❌ ISSUE DETECTED: The fix may not be complete!" -ForegroundColor Red
+        Write-Host "`n[ERROR] ISSUE DETECTED: The fix may not be complete!" -ForegroundColor Red
     }
     
     Remove-PSSession -Session $session

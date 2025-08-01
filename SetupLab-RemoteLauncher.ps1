@@ -1,4 +1,4 @@
-﻿# SetupLab Remote Launcher
+# SetupLab Remote Launcher
 # This script downloads and runs the SetupLab from a web server or file share
 
 param(

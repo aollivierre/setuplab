@@ -39,7 +39,7 @@ $patterns = @(
     'checkmark|check mark',
     'x mark',
     'smart quote',
-    '[✓✗]'
+    '[[OK][FAIL]]'
 )
 
 foreach ($pattern in $patterns) {

@@ -7,7 +7,7 @@ Add comprehensive Claude CLI installation testing scripts
 - Added minimal test configuration for focused testing
 - Removed obsolete Unicode replacement tool files
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
+[BOT] Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF

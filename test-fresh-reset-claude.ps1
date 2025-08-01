@@ -8,7 +8,7 @@ param(
 $securePassword = ConvertTo-SecureString $Password -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential($Username, $securePassword)
 
-Write-Host "`n🔄 TESTING ON FRESHLY RESET SYSTEM 🔄" -ForegroundColor Cyan
+Write-Host "`n[REFRESH] TESTING ON FRESHLY RESET SYSTEM [REFRESH]" -ForegroundColor Cyan
 Write-Host "=====================================`n" -ForegroundColor Cyan
 
 try {
@@ -76,10 +76,10 @@ try {
     Write-Host "   Claude version: $($finalCheck.ClaudeVersion)" -ForegroundColor $(if($finalCheck.ClaudeVersion -match "Claude Code"){'Green'}else{'Red'})
     
     if ($finalCheck.ClaudeExists -and $finalCheck.ClaudeVersion -match "Claude Code") {
-        Write-Host "`n✅ SUCCESS! Claude Code installed successfully on fresh system!" -ForegroundColor Green
+        Write-Host "`n[DONE] SUCCESS! Claude Code installed successfully on fresh system!" -ForegroundColor Green
         Write-Host "The fix is working perfectly!" -ForegroundColor Green
     } else {
-        Write-Host "`n❌ FAILED! Claude Code did not install properly" -ForegroundColor Red
+        Write-Host "`n[ERROR] FAILED! Claude Code did not install properly" -ForegroundColor Red
         Write-Host "Further investigation needed" -ForegroundColor Red
     }
     

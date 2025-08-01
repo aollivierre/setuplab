@@ -7,7 +7,7 @@ Fix SetupLabCore.psm1 CUSTOM installer empty string bug
 - Updated WebLauncher version to 2.1.0 to track this fix
 - This fixes the "Cannot bind argument to parameter Path because it is an empty string" error
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
+[BOT] Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 "@

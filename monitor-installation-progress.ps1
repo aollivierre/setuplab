@@ -54,12 +54,12 @@ try {
                 cmd /c "`"$env:APPDATA\npm\claude.cmd`" --version 2>&1"
             }
             
-            Write-Host "`n✅ SUCCESS! Claude Code has been installed!" -ForegroundColor Green
+            Write-Host "`n[DONE] SUCCESS! Claude Code has been installed!" -ForegroundColor Green
             Write-Host "Version: $version" -ForegroundColor Green
             Write-Host "`nThe fix worked! Claude Code installed successfully on the fresh system." -ForegroundColor Green
         }
         elseif ($status.ActiveProcesses -eq 0) {
-            Write-Host "`n⚠️ Installation appears to have completed but Claude was not found" -ForegroundColor Yellow
+            Write-Host "`n[WARNING] Installation appears to have completed but Claude was not found" -ForegroundColor Yellow
             break
         }
         else {
@@ -69,7 +69,7 @@ try {
     }
     
     if (-not $claudeInstalled) {
-        Write-Host "`n❌ Claude was not installed after monitoring" -ForegroundColor Red
+        Write-Host "`n[ERROR] Claude was not installed after monitoring" -ForegroundColor Red
         
         # Get final log
         $finalLog = Invoke-Command -Session $session -ScriptBlock {

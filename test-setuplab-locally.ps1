@@ -123,6 +123,8 @@ else {
     
     if (Test-Path $todayLogPath) {
         Write-Host "Today's log file: $todayLogPath" -ForegroundColor Yellow
+        Write-Host "Opening log file in notepad..." -ForegroundColor Gray
+        Start-Process notepad.exe -ArgumentList $todayLogPath
     }
     
     # Also show latest log if different

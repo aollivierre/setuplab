@@ -8,8 +8,8 @@
 powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')"
 ```
 
-**What this installs (16 applications):**
-- ✅ **Development**: Git, VS Code, Node.js, GitHub Desktop, GitHub CLI, Claude Code (CLI)
+**What this installs (17 applications):**
+- ✅ **Development**: Git, VS Code, Node.js, Python, GitHub Desktop, GitHub CLI, Claude Code (CLI)
 - ✅ **Utilities**: 7-Zip, ShareX, Everything, FileLocator Pro, Warp Terminal, Windows Terminal
 - ✅ **Browsers**: Google Chrome, Mozilla Firefox  
 - ✅ **Runtime**: Visual C++ Redistributables
@@ -57,29 +57,30 @@ cd setuplab
 
 Recent improvements have achieved:
 - **100% success rate** on fresh Windows 11 installations
-- **All 18 applications** install correctly
+- **All 17 applications** install correctly
 - **Zero manual intervention** required
 - **Enhanced logging** for troubleshooting
 
 ## 🔧 Configuration
 
 ### Software List (in installation order)
-1. 7-Zip
-2. Git
-3. Visual Studio Code
-4. Node.js
-5. GitHub Desktop
-6. GitHub CLI
-7. Windows Terminal
-8. ShareX
-9. Everything
-10. FileLocator Pro
-11. Visual C++ Redistributables
-12. Google Chrome
-13. Mozilla Firefox
-14. Claude CLI
-15. Warp Terminal
-16. PowerShell 7 (installed last)
+1. Git
+2. Node.js
+3. Claude Code (CLI)
+4. Python
+5. 7-Zip
+6. Visual Studio Code
+7. GitHub Desktop
+8. GitHub CLI
+9. Windows Terminal
+10. ShareX
+11. Everything
+12. FileLocator Pro
+13. Visual C++ Redistributables
+14. Google Chrome
+15. Mozilla Firefox
+16. Warp Terminal
+17. PowerShell 7 (installed last)
 
 ### Customization
 Edit `software-config.json` to:

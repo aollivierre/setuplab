@@ -360,7 +360,7 @@ else {
 Write-SetupLog "" -Level Info
 Write-SetupLog "Downloading Sysinternals Suite..." -Level Info
 
-$sysinternalsScript = Join-Path $PSScriptRoot "Download-Sysinternals.ps1"
+$sysinternalsScript = Join-Path $PSScriptRoot "Download-Sysinternals-Enhanced.ps1"
 if (Test-Path $sysinternalsScript) {
     try {
         & $sysinternalsScript

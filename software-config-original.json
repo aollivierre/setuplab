@@ -1,0 +1,301 @@
+﻿{
+    "software":  [
+                     {
+                         "name":  "7-Zip",
+                         "enabled":  true,
+                         "registryName":  "7-Zip",
+                         "executablePath":  "C:\\Program Files\\7-Zip\\7z.exe",
+                         "downloadUrl":  "https://www.7-zip.org/a/7z2500-x64.msi",
+                         "installerExtension":  ".msi",
+                         "installType":  "MSI",
+                         "installArguments":  [
+                                                  "/quiet",
+                                                  "/norestart"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "Git",
+                         "enabled":  true,
+                         "registryName":  "Git",
+                         "executablePath":  "C:\\Program Files\\Git\\bin\\git.exe",
+                         "downloadUrl":  "https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/Git-2.50.1-64-bit.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/VERYSILENT",
+                                                  "/NORESTART",
+                                                  "/NOCANCEL",
+                                                  "/SP-",
+                                                  "/CLOSEAPPLICATIONS",
+                                                  "/RESTARTAPPLICATIONS"
+                                              ],
+                         "minimumVersion":  "2.40.0",
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "Visual Studio Code",
+                         "enabled":  true,
+                         "registryName":  "Microsoft Visual Studio Code",
+                         "executablePath":  "C:\\Program Files\\Microsoft VS Code\\Code.exe",
+                         "downloadUrl":  "https://code.visualstudio.com/sha/download?build=stable\u0026os=win32-x64",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/verysilent",
+                                                  "/mergetasks=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "Node.js",
+                         "enabled":  true,
+                         "registryName":  "Node.js",
+                         "executablePath":  "C:\\Program Files\\nodejs\\node.exe",
+                         "downloadUrl":  "https://nodejs.org/dist/v22.17.1/node-v22.17.1-x64.msi",
+                         "installerExtension":  ".msi",
+                         "installType":  "MSI",
+                         "installArguments":  [
+                                                  "/qn",
+                                                  "/norestart"
+                                              ],
+                         "minimumVersion":  "20.0.0",
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "GitHub Desktop",
+                         "enabled":  true,
+                         "registryName":  "GitHub Desktop",
+                         "executablePath":  null,
+                         "downloadUrl":  "https://central.github.com/deployments/desktop/desktop/latest/win32",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/S"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "GitHub CLI",
+                         "enabled":  true,
+                         "registryName":  "GitHub CLI",
+                         "executablePath":  "C:\\Program Files\\GitHub CLI\\gh.exe",
+                         "downloadUrl":  "https://github.com/cli/cli/releases/download/v2.75.1/gh_2.75.1_windows_amd64.msi",
+                         "installerExtension":  ".msi",
+                         "installType":  "MSI",
+                         "installArguments":  [
+                                                  "/quiet",
+                                                  "/norestart"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "Windows Terminal",
+                         "enabled":  true,
+                         "registryName":  "Windows Terminal",
+                         "executablePath":  null,
+                         "downloadUrl":  "https://github.com/microsoft/terminal/releases/download/v1.21.10351.0/Microsoft.WindowsTerminal_1.21.10351.0_8wekyb3d8bbwe.msixbundle",
+                         "installerExtension":  ".msixbundle",
+                         "installType":  "MSIX",
+                         "installArguments":  [
+
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "Docker Desktop",
+                         "enabled":  false,
+                         "registryName":  "Docker Desktop",
+                         "executablePath":  "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
+                         "downloadUrl":  "https://desktop.docker.com/win/stable/amd64/Docker%20Desktop%20Installer.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "install",
+                                                  "--quiet",
+                                                  "--accept-license"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development"
+                     },
+                     {
+                         "name":  "ShareX",
+                         "enabled":  true,
+                         "registryName":  "ShareX",
+                         "executablePath":  "C:\\Program Files\\ShareX\\ShareX.exe",
+                         "downloadUrl":  "https://github.com/ShareX/ShareX/releases/download/v17.1.0/ShareX-17.1.0-setup.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/VERYSILENT",
+                                                  "/SUPPRESSMSGBOXES",
+                                                  "/NORESTART",
+                                                  "/SP-"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "Everything",
+                         "enabled":  true,
+                         "registryName":  "Everything*",
+                         "executablePath":  "C:\\Program Files\\Everything\\Everything.exe",
+                         "downloadUrl":  "https://www.voidtools.com/Everything-1.4.1.1028.x64-Setup.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/S"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "FileLocator Pro",
+                         "enabled":  true,
+                         "registryName":  "FileLocator Pro*",
+                         "executablePath":  "C:\\Program Files\\Mythicsoft\\FileLocator Pro\\FileLocatorPro.exe",
+                         "downloadUrl":  "https://download.mythicsoft.com/flp/3522/filelocator_3522.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/VERYSILENT"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "Visual C++ Redistributables",
+                         "enabled":  true,
+                         "registryName":  "Microsoft Visual C++ 2015-2022 Redistributable (x64)",
+                         "executablePath":  null,
+                         "downloadUrl":  "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/install",
+                                                  "/quiet",
+                                                  "/norestart"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Runtime"
+                     },
+                     {
+                         "name":  "Claude Code",
+                         "enabled":  false,
+                         "registryName":  null,
+                         "executablePath":  null,
+                         "downloadUrl":  null,
+                         "installerExtension":  null,
+                         "installType":  "NPM",
+                         "installArguments":  [
+
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development",
+                         "npmPackage":  "@anthropic-ai/claude-code",
+                         "npmInstallArgs":  [
+                                                "--ignore-scripts"
+                                            ],
+                         "postInstallCommand":  "echo \u0027Claude Code installed! Run: npx win-claude-code@latest\u0027"
+                     },
+                     {
+                         "name":  "Google Chrome",
+                         "enabled":  true,
+                         "registryName":  "Google Chrome",
+                         "executablePath":  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                         "downloadUrl":  "https://dl.google.com/chrome/install/latest/chrome_installer.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/silent",
+                                                  "/install"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Browsers"
+                     },
+                     {
+                         "name":  "Mozilla Firefox",
+                         "enabled":  true,
+                         "registryName":  "Mozilla Firefox*",
+                         "executablePath":  "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+                         "downloadUrl":  "https://download.mozilla.org/?product=firefox-latest\u0026os=win64\u0026lang=en-US",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/S"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Browsers"
+                     },
+                     {
+                         "name":  "Claude Code (CLI)",
+                         "enabled":  true,
+                         "registryName":  null,
+                         "executablePath":  "%APPDATA%\\npm\\claude.cmd",
+                         "downloadUrl":  null,
+                         "installerExtension":  null,
+                         "installType":  "CUSTOM",
+                         "installArguments":  [
+
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Development",
+                         "customInstallScript":  "install-claude-cli.ps1"
+                     },
+                     {
+                         "name":  "Warp Terminal",
+                         "enabled":  true,
+                         "registryName":  "Warp",
+                         "executablePath":  "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Warp\\Warp.exe",
+                         "downloadUrl":  "https://releases.warp.dev/stable/v0.2025.07.09.08.11.stable_01/WarpSetup.exe",
+                         "installerExtension":  ".exe",
+                         "installType":  "EXE",
+                         "installArguments":  [
+                                                  "/VERYSILENT",
+                                                  "/SUPPRESSMSGBOXES"
+                                              ],
+                         "minimumVersion":  null,
+                         "category":  "Utilities"
+                     },
+                     {
+                         "name":  "PowerShell 7",
+                         "enabled":  true,
+                         "registryName":  "PowerShell 7*",
+                         "executablePath":  "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+                         "downloadUrl":  "https://github.com/PowerShell/PowerShell/releases/download/v7.5.2/PowerShell-7.5.2-win-x64.msi",
+                         "installerExtension":  ".msi",
+                         "installType":  "MSI",
+                         "installArguments":  [
+                                                  "/quiet",
+                                                  "/norestart",
+                                                  "ADD_EXPLORER_CONTEXT_MENU_OPENPOWERSHELL=1",
+                                                  "ADD_FILE_CONTEXT_MENU_RUNPOWERSHELL=1",
+                                                  "ENABLE_PSREMOTING=1",
+                                                  "REGISTER_MANIFEST=1",
+                                                  "USE_MU=1",
+                                                  "ENABLE_MU=1",
+                                                  "ADD_PATH=1"
+                                              ],
+                         "minimumVersion":  "7.5.0",
+                         "category":  "Development"
+                     }
+                 ],
+    "settings":  {
+                     "maxConcurrency":  4,
+                     "retryAttempts":  3,
+                     "retryDelay":  5,
+                     "logRetention":  30,
+                     "skipValidation":  false,
+                     "enableCategories":  [
+                                              "Utilities",
+                                              "Development",
+                                              "Runtime",
+                                              "Browsers"
+                                          ]
+                 }
+}

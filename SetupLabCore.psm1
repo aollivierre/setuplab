@@ -1243,10 +1243,28 @@ function Start-SerialInstallation {
                 Invoke-SetupInstaller @installerParams
             }
             else {
+                # Handle dynamic URL if needed
+                $downloadUrl = $installation.DownloadUrl
+                
+                if ($installation.dynamicUrl -and $installation.Name -eq "Python") {
+                    Write-SetupLog "Fetching dynamic URL for Python..." -Level Debug
+                    
+                    # Load the Python URL fetcher
+                    $pythonFetcherPath = Join-Path $PSScriptRoot "Get-LatestPythonUrl.ps1"
+                    if (Test-Path $pythonFetcherPath) {
+                        . $pythonFetcherPath
+                        $downloadUrl = Get-LatestPythonUrl
+                        Write-SetupLog "Dynamic Python URL: $downloadUrl" -Level Debug
+                    } else {
+                        Write-SetupLog "Python URL fetcher not found, using fallback" -Level Warning
+                        $downloadUrl = "https://www.python.org/ftp/python/3.13.1/python-3.13.1-amd64.exe"
+                    }
+                }
+                
                 # Download installer
                 $installerPath = Join-Path $env:TEMP "$($installation.Name)_installer$($installation.InstallerExtension)"
                 Write-SetupLog "Downloading installer to: $installerPath" -Level Debug
-                Start-SetupDownload -Url $installation.DownloadUrl -Destination $installerPath
+                Start-SetupDownload -Url $downloadUrl -Destination $installerPath
                 
                 # Run installer
                 Invoke-SetupInstaller -InstallerPath $installerPath -Arguments $installation.InstallArguments -InstallType $installation.InstallType

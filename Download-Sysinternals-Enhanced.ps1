@@ -22,28 +22,32 @@ $AgeCheckFile = Join-Path $SysinternalsPath ".last_updated"
 $MaxAgeInDays = 30
 #endregion
 
-#region Import Logging Module
-$loggingModulePath = Join-Path $PSScriptRoot "SetupLabCore.psm1"
-if (Test-Path $loggingModulePath) {
-    Import-Module $loggingModulePath -Force
-} else {
-    # Fallback to simple logging
-    function Write-SetupLog {
-        param(
-            [string]$Message,
-            [string]$Level = "Info"
-        )
-        
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $color = switch ($Level) {
-            "Error" { "Red" }
-            "Warning" { "Yellow" }
-            "Success" { "Green" }
-            "Debug" { "Gray" }
-            default { "White" }
+#region Check Logging Module
+# Check if Write-SetupLog is already available (loaded by main script)
+if (-not (Get-Command Write-SetupLog -ErrorAction SilentlyContinue)) {
+    # Only import if not already available
+    $loggingModulePath = Join-Path $PSScriptRoot "SetupLabCore.psm1"
+    if (Test-Path $loggingModulePath) {
+        Import-Module $loggingModulePath
+    } else {
+        # Fallback to simple logging
+        function Write-SetupLog {
+            param(
+                [string]$Message,
+                [string]$Level = "Info"
+            )
+            
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            $color = switch ($Level) {
+                "Error" { "Red" }
+                "Warning" { "Yellow" }
+                "Success" { "Green" }
+                "Debug" { "Gray" }
+                default { "White" }
+            }
+            
+            Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
         }
-        
-        Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
     }
 }
 #endregion

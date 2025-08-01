@@ -292,6 +292,21 @@ function Test-SoftwareInstalled {
     
     # Special handling for Windows Terminal (MSIX package)
     if ($Name -eq "Windows Terminal") {
+        # Check OS version - Windows 11 and Server 2025 have Windows Terminal built-in
+        $osVersion = [System.Environment]::OSVersion.Version
+        $osProductType = (Get-WmiObject -Class Win32_OperatingSystem).ProductType
+        
+        # Windows 11 is version 10.0.22000+ and ProductType 1 (Workstation)
+        # Windows Server 2025 is version 10.0.26100+ and ProductType 2 or 3 (Server)
+        $isWindows11 = ($osVersion.Major -eq 10 -and $osVersion.Build -ge 22000 -and $osProductType -eq 1)
+        $isServer2025 = ($osVersion.Major -eq 10 -and $osVersion.Build -ge 26100 -and $osProductType -ne 1)
+        
+        if ($isWindows11 -or $isServer2025) {
+            $osName = if ($isWindows11) { "Windows 11" } else { "Windows Server 2025" }
+            Write-SetupLog "$Name is built-in on $osName (Build $($osVersion.Build)) - skipping installation" -Level Success
+            return $true
+        }
+        
         try {
             $package = Get-AppxPackage -Name "Microsoft.WindowsTerminal" -ErrorAction SilentlyContinue
             if ($package) {

@@ -8,7 +8,7 @@
 iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')
 ```
 
-**What this installs (18 applications):**
+**What this installs (16 applications):**
 - ✅ **Development**: Git, VS Code, Node.js, GitHub Desktop, GitHub CLI, Claude Code (CLI)
 - ✅ **Utilities**: 7-Zip, ShareX, Everything, FileLocator Pro, Warp Terminal, Windows Terminal
 - ✅ **Browsers**: Google Chrome, Mozilla Firefox  

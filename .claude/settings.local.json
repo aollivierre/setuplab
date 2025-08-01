@@ -17,7 +17,11 @@
       "Bash(git checkout:*)",
       "Bash(od:*)",
       "Bash(python:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(Test-Connection -ComputerName 198.18.1.157 -Count 2)",
+      "Bash(Move-Item -Path \"test-claude-cli-*.ps1\", \"test-connectivity.ps1\", \"fix-npm-path-remote.ps1\" -Destination \"archive\\debug-scripts\"\" -Force)",
+      "Bash(Copy-Item -Path \"C:\\code\\setuplab\\SetupLab-WebLauncher-NoCache-Final.ps1\" -Destination \"C:\\code\\setuplab\\SetupLab-WebLauncher-NoCache.ps1\" -Force)",
+      "Bash(Start-Sleep -Seconds 5)"
     ],
     "deny": []
   }

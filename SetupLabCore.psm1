@@ -657,18 +657,32 @@ function Invoke-SetupInstaller {
             
             Write-SetupLog "Running custom install script: $CustomInstallScript" -Level Info
             
+            # Enhanced debugging
+            Write-SetupLog "CUSTOM Script Debug Information:" -Level Debug
+            Write-SetupLog "  Script Path: $CustomInstallScript" -Level Debug
+            Write-SetupLog "  Script Exists: $(Test-Path $CustomInstallScript)" -Level Debug
+            Write-SetupLog "  Current Directory: $(Get-Location)" -Level Debug
+            Write-SetupLog "  PSScriptRoot: $PSScriptRoot" -Level Debug
+            Write-SetupLog "  Environment PATH: $env:PATH" -Level Debug
+            
             try {
                 # Ensure we're in the correct directory
                 $scriptDir = Split-Path $CustomInstallScript -Parent
+                Write-SetupLog "  Script Directory: $scriptDir" -Level Debug
                 Push-Location $scriptDir
                 
                 try {
+                    Write-SetupLog "  Executing script from directory: $(Get-Location)" -Level Debug
                     & $CustomInstallScript
                 } finally {
                     Pop-Location
                 }
                 return
             } catch {
+                Write-SetupLog "Custom script execution error details:" -Level Error
+                Write-SetupLog "  Error: $_" -Level Error
+                Write-SetupLog "  Error Type: $($_.Exception.GetType().FullName)" -Level Error
+                Write-SetupLog "  Stack Trace: $($_.ScriptStackTrace)" -Level Error
                 throw "Custom install script failed: $_"
             }
         }
@@ -1083,11 +1097,27 @@ function Start-SerialInstallation {
                     throw "Custom install script path is required for CUSTOM install type"
                 }
                 
+                # Enhanced debugging for script path resolution
+                Write-SetupLog "CUSTOM Install Path Resolution:" -Level Debug
+                Write-SetupLog "  Original Path: $($installation.customInstallScript)" -Level Debug
+                Write-SetupLog "  Is Rooted: $([System.IO.Path]::IsPathRooted($installation.customInstallScript))" -Level Debug
+                Write-SetupLog "  PSScriptRoot: $PSScriptRoot" -Level Debug
+                
                 $scriptPath = if ([System.IO.Path]::IsPathRooted($installation.customInstallScript)) {
                     $installation.customInstallScript
                 } else {
-                    Join-Path $PSScriptRoot $installation.customInstallScript
+                    if (-not $PSScriptRoot) {
+                        # Fallback: use module directory
+                        $moduleDir = Split-Path (Get-Module SetupLabCore).Path -Parent
+                        Write-SetupLog "  PSScriptRoot is empty, using module directory: $moduleDir" -Level Debug
+                        Join-Path $moduleDir $installation.customInstallScript
+                    } else {
+                        Join-Path $PSScriptRoot $installation.customInstallScript
+                    }
                 }
+                
+                Write-SetupLog "  Resolved Path: $scriptPath" -Level Debug
+                Write-SetupLog "  Path Exists: $(Test-Path $scriptPath)" -Level Debug
                 
                 $installerParams = @{
                     InstallType = 'CUSTOM'

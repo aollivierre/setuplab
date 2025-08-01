@@ -51,16 +51,38 @@ if (-not $npmGlobalDir) {
 Write-Host "npm global directory: $npmGlobalDir" -ForegroundColor Gray
 
 # Check if already in PATH
-$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not $currentPath) {
+try {
+    $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not $currentPath) {
+        Write-Host "User PATH is empty or null, initializing..." -ForegroundColor Yellow
+        $currentPath = ""
+    }
+} catch {
+    Write-Host "Warning: Could not get user PATH: $_" -ForegroundColor Yellow
     $currentPath = ""
 }
 
 if ($currentPath -notlike "*$npmGlobalDir*") {
     # Add to PATH
     $newPath = if ($currentPath) { "$currentPath;$npmGlobalDir" } else { $npmGlobalDir }
-    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-    Write-Host "Added $npmGlobalDir to user PATH" -ForegroundColor Green
+    
+    try {
+        [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+        Write-Host "Added $npmGlobalDir to user PATH" -ForegroundColor Green
+    } catch {
+        Write-Host "Warning: Could not set user PATH: $_" -ForegroundColor Yellow
+        Write-Host "Attempting alternative method..." -ForegroundColor Yellow
+        
+        # Try using registry directly as fallback
+        try {
+            $regPath = "HKCU:\Environment"
+            Set-ItemProperty -Path $regPath -Name "Path" -Value $newPath
+            Write-Host "Updated PATH via registry" -ForegroundColor Green
+        } catch {
+            Write-Host "Failed to update PATH: $_" -ForegroundColor Red
+            # Continue anyway - installation might still work
+        }
+    }
     
     # Update current session
     $env:Path = "$env:Path;$npmGlobalDir"

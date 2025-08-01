@@ -617,8 +617,14 @@ function Invoke-SetupInstaller {
         return
     }
     
-    if (-not (Test-Path $InstallerPath)) {
-        throw "Installer not found: $InstallerPath"
+    # Skip installer path check for NPM and CUSTOM types
+    if ($InstallType -notin @('NPM', 'CUSTOM')) {
+        if (-not $InstallerPath) {
+            throw "InstallerPath is required for install type: $InstallType"
+        }
+        if (-not (Test-Path $InstallerPath)) {
+            throw "Installer not found: $InstallerPath"
+        }
     }
     
     # Determine install type if Auto

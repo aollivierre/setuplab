@@ -47,7 +47,24 @@ function Write-SetupLog {
     )
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = if ($Message) { "[$timestamp] [$Level] $Message" } else { "" }
+    
+    # Get caller information from call stack
+    $callerInfo = ""
+    $callStack = Get-PSCallStack
+    if ($callStack.Count -gt 1) {
+        # Skip the first frame (this function) to get the actual caller
+        $caller = $callStack[1]
+        $lineNumber = $caller.ScriptLineNumber
+        $functionName = $caller.FunctionName
+        $scriptName = if ($caller.ScriptName) { Split-Path $caller.ScriptName -Leaf } else { "<Unknown>" }
+        
+        # Include line info for Debug and Error levels, or when dealing with CUSTOM installer
+        if ($Level -in 'Debug', 'Error' -or $Message -match 'CUSTOM|CustomInstallScript|empty string') {
+            $callerInfo = " [${scriptName}:${lineNumber}:${functionName}]"
+        }
+    }
+    
+    $logMessage = if ($Message) { "[$timestamp] [$Level]${callerInfo} $Message" } else { "" }
     $logFilePath = Join-Path $script:LogPath $LogFile
     
     # Write to log file with retry logic for concurrent access
@@ -88,6 +105,17 @@ function Write-SetupLog {
     
     if ($Message) {
         Write-Host $logMessage -ForegroundColor $color
+        
+        # For errors, also log the full stack trace
+        if ($Level -eq 'Error' -and $callStack.Count -gt 2) {
+            $stackTrace = "Stack trace:"
+            for ($i = 2; $i -lt $callStack.Count; $i++) {
+                $frame = $callStack[$i]
+                $stackTrace += "`n  at $($frame.FunctionName) [$($frame.ScriptName):$($frame.ScriptLineNumber)]"
+            }
+            Add-Content -Path $logFilePath -Value $stackTrace -Force -ErrorAction SilentlyContinue
+            Write-Host $stackTrace -ForegroundColor $color
+        }
     } else {
         Write-Host ""
     }
@@ -647,11 +675,42 @@ function Invoke-SetupInstaller {
         }
         
         'CUSTOM' {
+            Write-SetupLog "CUSTOM installer block started" -Level Debug
+            Write-SetupLog "CustomInstallScript parameter value: '$CustomInstallScript'" -Level Debug
+            Write-SetupLog "Is null: $($null -eq $CustomInstallScript)" -Level Debug
+            Write-SetupLog "Is empty: $([string]::IsNullOrWhiteSpace($CustomInstallScript))" -Level Debug
+            
+            # Enhanced parameter validation
             if (-not $CustomInstallScript -or [string]::IsNullOrWhiteSpace($CustomInstallScript)) {
+                Write-SetupLog "ERROR: CustomInstallScript is null or empty!" -Level Error
+                Write-SetupLog "Function parameters:" -Level Error
+                Write-SetupLog "  InstallerPath: '$InstallerPath'" -Level Error
+                Write-SetupLog "  InstallType: '$InstallType'" -Level Error
+                Write-SetupLog "  CustomInstallScript: '$CustomInstallScript'" -Level Error
+                Write-SetupLog "  Arguments: '$($Arguments -join ' ')'" -Level Error
+                
                 throw "Custom install script path is required for CUSTOM install type"
             }
             
-            if (-not (Test-Path $CustomInstallScript)) {
+            Write-SetupLog "About to call Test-Path with: '$CustomInstallScript'" -Level Debug
+            try {
+                $pathExists = Test-Path $CustomInstallScript -ErrorAction Stop
+                Write-SetupLog "Test-Path result: $pathExists" -Level Debug
+            }
+            catch {
+                Write-SetupLog "ERROR: Test-Path failed!" -Level Error
+                Write-SetupLog "Test-Path error: $_" -Level Error
+                Write-SetupLog "Error type: $($_.Exception.GetType().FullName)" -Level Error
+                throw
+            }
+            
+            if (-not $pathExists) {
+                Write-SetupLog "ERROR: Script not found at path: $CustomInstallScript" -Level Error
+                Write-SetupLog "Current directory: $(Get-Location)" -Level Error
+                Write-SetupLog "Directory contents:" -Level Error
+                Get-ChildItem -Path (Split-Path $CustomInstallScript -Parent -ErrorAction SilentlyContinue) -ErrorAction SilentlyContinue | ForEach-Object {
+                    Write-SetupLog "  $_" -Level Error
+                }
                 throw "Custom install script not found: $CustomInstallScript"
             }
             
@@ -663,26 +722,54 @@ function Invoke-SetupInstaller {
             Write-SetupLog "  Script Exists: $(Test-Path $CustomInstallScript)" -Level Debug
             Write-SetupLog "  Current Directory: $(Get-Location)" -Level Debug
             Write-SetupLog "  PSScriptRoot: $PSScriptRoot" -Level Debug
+            Write-SetupLog "  Module PSScriptRoot: $script:PSScriptRoot" -Level Debug
             Write-SetupLog "  Environment PATH: $env:PATH" -Level Debug
+            Write-SetupLog "  Node.js in PATH: $($env:PATH -match 'nodejs')" -Level Debug
+            Write-SetupLog "  npm location: $(Get-Command npm -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)" -Level Debug
             
             try {
                 # Ensure we're in the correct directory
                 $scriptDir = Split-Path $CustomInstallScript -Parent
                 Write-SetupLog "  Script Directory: $scriptDir" -Level Debug
+                Write-SetupLog "  Changing to script directory..." -Level Debug
                 Push-Location $scriptDir
                 
                 try {
-                    Write-SetupLog "  Executing script from directory: $(Get-Location)" -Level Debug
+                    Write-SetupLog "  Current directory after push: $(Get-Location)" -Level Debug
+                    Write-SetupLog "  About to execute: & '$CustomInstallScript'" -Level Debug
+                    
+                    # Add pre-execution validation
+                    $scriptContent = Get-Content $CustomInstallScript -Raw -ErrorAction SilentlyContinue
+                    if ($scriptContent) {
+                        Write-SetupLog "  Script size: $($scriptContent.Length) bytes" -Level Debug
+                        Write-SetupLog "  Script first line: $($scriptContent.Split("`n")[0])" -Level Debug
+                    }
+                    
                     & $CustomInstallScript
-                } finally {
+                    Write-SetupLog "  Script execution completed" -Level Debug
+                } 
+                catch {
+                    Write-SetupLog "ERROR: Script execution failed!" -Level Error
+                    Write-SetupLog "  Error message: $_" -Level Error
+                    Write-SetupLog "  Exception type: $($_.Exception.GetType().FullName)" -Level Error
+                    Write-SetupLog "  Target object: $($_.TargetObject)" -Level Error
+                    Write-SetupLog "  InvocationInfo:" -Level Error
+                    Write-SetupLog ($_.InvocationInfo | Format-List | Out-String) -Level Error
+                    throw
+                }
+                finally {
+                    Write-SetupLog "  Restoring original directory..." -Level Debug
                     Pop-Location
+                    Write-SetupLog "  Current directory after pop: $(Get-Location)" -Level Debug
                 }
                 return
-            } catch {
-                Write-SetupLog "Custom script execution error details:" -Level Error
+            } 
+            catch {
+                Write-SetupLog "Custom script execution error (outer catch):" -Level Error
                 Write-SetupLog "  Error: $_" -Level Error
                 Write-SetupLog "  Error Type: $($_.Exception.GetType().FullName)" -Level Error
-                Write-SetupLog "  Stack Trace: $($_.ScriptStackTrace)" -Level Error
+                Write-SetupLog "  Exception details:" -Level Error
+                Write-SetupLog ($_.Exception | Format-List * -Force | Out-String) -Level Error
                 throw "Custom install script failed: $_"
             }
         }
@@ -1099,9 +1186,10 @@ function Start-SerialInstallation {
                 
                 # Enhanced debugging for script path resolution
                 Write-SetupLog "CUSTOM Install Path Resolution:" -Level Debug
-                Write-SetupLog "  Original Path: $($installation.customInstallScript)" -Level Debug
+                Write-SetupLog "  Original Path: '$($installation.customInstallScript)'" -Level Debug
                 Write-SetupLog "  Is Rooted: $([System.IO.Path]::IsPathRooted($installation.customInstallScript))" -Level Debug
-                Write-SetupLog "  PSScriptRoot: $PSScriptRoot" -Level Debug
+                Write-SetupLog "  PSScriptRoot: '$PSScriptRoot'" -Level Debug
+                Write-SetupLog "  PSScriptRoot is null: $($null -eq $PSScriptRoot)" -Level Debug
                 
                 $scriptPath = if ([System.IO.Path]::IsPathRooted($installation.customInstallScript)) {
                     $installation.customInstallScript

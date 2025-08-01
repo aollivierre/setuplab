@@ -3,13 +3,8 @@
 ## 🚀 Quick Start - 100% Automated Installation
 
 ### One-Line Installer (Recommended)
-```powershell
-# From PowerShell - Works on fresh Windows 11 installations - 100% success rate!
-iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')
-```
-
 ```cmd
-# From CMD or Run dialog (Win+R) - Uses PowerShell 5.1
+# Works from anywhere - CMD, PowerShell, or Run dialog (Win+R)
 powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1')"
 ```
 
@@ -31,29 +26,18 @@ powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercon
 ## Alternative Installation Methods
 
 ### With Parameters
-
-**From PowerShell:**
-```powershell
-# Skip validation checks
-iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -SkipValidation
-
-# Install specific categories only
-iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -Categories "Development","Browsers"
-
-# Install specific software only
-iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -Software "Git","Chrome","VSCode"
-
-# List available software
-iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -ListSoftware
-```
-
-**From CMD:**
 ```cmd
 # Skip validation checks
 powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -SkipValidation"
 
+# Install specific categories only
+powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -Categories 'Development','Browsers'"
+
 # Install specific software only
 powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -Software 'Git','Chrome','VSCode'"
+
+# List available software
+powershell -ExecutionPolicy Bypass -Command "iex (irm 'https://raw.githubusercontent.com/aollivierre/setuplab/main/SetupLab-WebLauncher-NoCache.ps1') -ListSoftware"
 ```
 
 ### Local Execution

@@ -26,7 +26,8 @@
       "Bash(curl:*)",
       "Bash(Start-Sleep -Seconds 60)",
       "Bash(git branch:*)",
-      "Bash(move commit-msg.ps1 create-commit.ps1 archivetemp-files)"
+      "Bash(move commit-msg.ps1 create-commit.ps1 archivetemp-files)",
+      "Bash(git pull:*)"
     ],
     "deny": []
   }

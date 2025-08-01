@@ -41,6 +41,13 @@ Write-Host ""
 # Get npm global directory
 Write-Host "Configuring PATH..." -ForegroundColor Yellow
 $npmGlobalDir = (npm config get prefix).Trim()
+
+# Validate npm global directory
+if (-not $npmGlobalDir) {
+    Write-Host "Failed to get npm global directory" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "npm global directory: $npmGlobalDir" -ForegroundColor Gray
 
 # Check if already in PATH

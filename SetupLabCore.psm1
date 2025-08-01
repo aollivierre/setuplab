@@ -658,7 +658,15 @@ function Invoke-SetupInstaller {
             Write-SetupLog "Running custom install script: $CustomInstallScript" -Level Info
             
             try {
-                & $CustomInstallScript
+                # Ensure we're in the correct directory
+                $scriptDir = Split-Path $CustomInstallScript -Parent
+                Push-Location $scriptDir
+                
+                try {
+                    & $CustomInstallScript
+                } finally {
+                    Pop-Location
+                }
                 return
             } catch {
                 throw "Custom install script failed: $_"

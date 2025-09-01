@@ -178,7 +178,7 @@
             "category": "Utilities"
         },
         {
-            "name": "Everything",
+            "name": "Everything 1.4 (Stable)",
             "enabled": true,
             "registryName": "voidtools Everything",
             "executablePath": "C:\\Program Files\\Everything\\Everything.exe",
@@ -187,6 +187,21 @@
             "installType": "EXE",
             "installArguments": [
                 "/S"
+            ],
+            "minimumVersion": null,
+            "category": "Utilities"
+        },
+        {
+            "name": "Everything 1.5 (Alpha)",
+            "enabled": false,
+            "registryName": "voidtools Everything 1.5a",
+            "executablePath": "C:\\Program Files\\Everything 1.5a\\Everything64.exe",
+            "downloadUrl": "https://www.voidtools.com/Everything-1.5.0.1396a.x64-Setup.exe",
+            "installerExtension": ".exe",
+            "installType": "EXE",
+            "installArguments": [
+                "/S",
+                "/D=C:\\Program Files\\Everything 1.5a"
             ],
             "minimumVersion": null,
             "category": "Utilities"

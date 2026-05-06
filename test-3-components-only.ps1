@@ -134,10 +134,10 @@ try {
     Write-Host "4. Claude CLI: $($result.ClaudeInstalled)" -ForegroundColor $(if($result.ClaudeInstalled){'Green'}else{'Red'})
     
     if ($result.ClaudeInstalled) {
-        Write-Host "`n✓ SUCCESS! Claude version: $($result.ClaudeVersion)" -ForegroundColor Green
+        Write-Host "`n[OK] SUCCESS! Claude version: $($result.ClaudeVersion)" -ForegroundColor Green
         Write-Host "The fix worked!" -ForegroundColor Green
     } else {
-        Write-Host "`n✗ FAILED! Claude not installed" -ForegroundColor Red
+        Write-Host "`n[FAIL] FAILED! Claude not installed" -ForegroundColor Red
         
         if ($result.LogContent.ClaudeErrors) {
             Write-Host "`nClaude errors:" -ForegroundColor Yellow

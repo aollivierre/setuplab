@@ -58,9 +58,9 @@ try {
     Write-Host "Claude: $($result.Claude)" -ForegroundColor $(if($result.Claude){'Green'}else{'Red'})
     
     if ($result.Claude) {
-        Write-Host "`n✓ SUCCESS! Claude version: $($result.Version)" -ForegroundColor Green
+        Write-Host "`n[OK] SUCCESS! Claude version: $($result.Version)" -ForegroundColor Green
     } else {
-        Write-Host "`n✗ FAILED! Claude not installed" -ForegroundColor Red
+        Write-Host "`n[FAIL] FAILED! Claude not installed" -ForegroundColor Red
     }
     
     Remove-PSSession -Session $session

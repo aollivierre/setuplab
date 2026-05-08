@@ -9,7 +9,7 @@ on:
 jobs:
   ascii-check:
     name: ascii-only via URT (single source of truth)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v5
